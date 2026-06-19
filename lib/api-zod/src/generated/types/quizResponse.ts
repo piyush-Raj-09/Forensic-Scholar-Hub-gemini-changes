@@ -5,7 +5,8 @@
  * Forensic Science Interactive Learning API
  * OpenAPI spec version: 0.1.0
  */
+import type { QuizQuestion } from './quizQuestion';
 
-export interface HealthStatus {
-  status: string;
+export interface QuizResponse {
+  questions: QuizQuestion[];
 }

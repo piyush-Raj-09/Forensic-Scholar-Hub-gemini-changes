@@ -5,7 +5,8 @@
  * Forensic Science Interactive Learning API
  * OpenAPI spec version: 0.1.0
  */
+import type { JumbledWord } from './jumbledWord';
 
-export interface HealthStatus {
-  status: string;
+export interface JumbledResponse {
+  words: JumbledWord[];
 }

@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Forensic Science Interactive Learning API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: quiz
+    description: Forensic quiz operations
+  - name: jumbled
+    description: Jumbled words operations
+  - name: crossword
+    description: Crossword operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /quiz/generate:
+    post:
+      operationId: generateQuiz
+      tags: [quiz]
+      summary: Generate forensic quiz questions
+      description: Generates 8 random MCQ questions via Claude API
+      responses:
+        "200":
+          description: Quiz questions generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResponse"
+        "500":
+          description: Error generating quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /jumbled/generate:
+    post:
+      operationId: generateJumbled
+      tags: [jumbled]
+      summary: Generate jumbled forensic words
+      description: Generates 8 scrambled forensic terms with hints via Claude API
+      responses:
+        "200":
+          description: Jumbled words generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JumbledResponse"
+        "500":
+          description: Error generating jumbled words
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /crossword/generate:
+    post:
+      operationId: generateCrossword
+      tags: [crossword]
+      summary: Generate forensic crossword puzzle
+      description: Generates 8 forensic terms with clues for a crossword via Claude API
+      responses:
+        "200":
+          description: Crossword generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrosswordResponse"
+        "500":
+          description: Error generating crossword
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +101,137 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    QuizQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: integer
+        domain:
+          type: string
+        explanation:
+          type: string
+      required:
+        - id
+        - question
+        - options
+        - correctAnswer
+        - domain
+        - explanation
+
+    QuizResponse:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required:
+        - questions
+
+    JumbledWord:
+      type: object
+      properties:
+        id:
+          type: integer
+        scrambled:
+          type: string
+        hint:
+          type: string
+        answer:
+          type: string
+      required:
+        - id
+        - scrambled
+        - hint
+        - answer
+
+    JumbledResponse:
+      type: object
+      properties:
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/JumbledWord"
+      required:
+        - words
+
+    CrosswordClue:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        direction:
+          type: string
+        clue:
+          type: string
+        answer:
+          type: string
+        row:
+          type: integer
+        col:
+          type: integer
+        length:
+          type: integer
+      required:
+        - id
+        - number
+        - direction
+        - clue
+        - answer
+        - row
+        - col
+        - length
+
+    CrosswordCell:
+      type: object
+      properties:
+        row:
+          type: integer
+        col:
+          type: integer
+        letter:
+          type: string
+        clueNumber:
+          type: ["integer", "null"]
+      required:
+        - row
+        - col
+        - letter
+
+    CrosswordResponse:
+      type: object
+      properties:
+        clues:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrosswordClue"
+        grid:
+          type: array
+          items:
+            type: array
+            items:
+              type: ["string", "null"]
+        gridSize:
+          type: integer
+      required:
+        - clues
+        - grid
+        - gridSize
