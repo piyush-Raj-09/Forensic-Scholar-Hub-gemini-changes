@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GenerateCrosswordResponse } from "@workspace/api-zod";
+import { geminiGenerate } from "../lib/gemini";
 
 const router: IRouter = Router();
 
@@ -11,32 +11,19 @@ function buildGrid(
   const grid: Array<Array<string | null>> = Array.from({ length: gridSize }, () =>
     Array(gridSize).fill(null)
   );
-
   for (const clue of clues) {
     const letters = clue.answer.split("");
     for (let i = 0; i < letters.length; i++) {
       const r = clue.direction === "across" ? clue.row : clue.row + i;
       const c = clue.direction === "across" ? clue.col + i : clue.col;
-      if (r < gridSize && c < gridSize) {
-        grid[r][c] = letters[i];
-      }
+      if (r < gridSize && c < gridSize) grid[r][c] = letters[i];
     }
   }
-
   return grid;
 }
 
 router.post("/crossword/generate", async (req, res): Promise<void> => {
   req.log.info("Generating forensic crossword");
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
-    return;
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Create a simple crossword puzzle with exactly 8 forensic science terms. Place them on a 15x15 grid (rows and cols 0-14). Mix "across" and "down" directions. Make sure words intersect naturally where possible.
 
@@ -73,11 +60,10 @@ Return ONLY valid JSON, no markdown:
   "gridSize": 15
 }
 
-Make sure length matches the actual answer length. Vary the starting positions so words don't overlap incorrectly. Provide exactly 8 clues with a mix of across and down.`;
+Make sure length matches the actual answer length. Vary starting positions so words do not overlap incorrectly. Provide exactly 8 clues with a mix of across and down.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = await geminiGenerate(prompt);
 
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
@@ -87,8 +73,7 @@ Make sure length matches the actual answer length. Vary the starting positions s
       return;
     }
 
-    const jsonStr = text.slice(jsonStart, jsonEnd + 1);
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
 
     if (parsed.clues) {
       parsed.clues = parsed.clues.map((c: { id?: number; length?: number; answer?: string }, i: number) => ({
@@ -98,15 +83,13 @@ Make sure length matches the actual answer length. Vary the starting positions s
       }));
     }
 
-    const grid = buildGrid(parsed.clues ?? [], parsed.gridSize ?? 15);
-    parsed.grid = grid;
+    parsed.grid = buildGrid(parsed.clues ?? [], parsed.gridSize ?? 15);
 
     const validated = GenerateCrosswordResponse.parse(parsed);
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating crossword");
-    const msg = (err as Error)?.message ?? "Failed to generate crossword puzzle";
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: (err as Error)?.message ?? "Failed to generate crossword puzzle" });
   }
 });
 

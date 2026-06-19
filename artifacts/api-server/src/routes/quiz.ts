@@ -1,20 +1,11 @@
 import { Router, type IRouter } from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GenerateQuizResponse } from "@workspace/api-zod";
+import { geminiGenerate } from "../lib/gemini";
 
 const router: IRouter = Router();
 
 router.post("/quiz/generate", async (req, res): Promise<void> => {
   req.log.info("Generating forensic quiz questions");
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
-    return;
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Generate exactly 8 multiple choice quiz questions about forensic science. Cover diverse domains including: DNA analysis, fingerprinting, ballistics, toxicology, crime scene investigation, forensic pathology, digital forensics, blood spatter analysis, document examination, and forensic anthropology.
 
@@ -35,8 +26,7 @@ Return ONLY valid JSON with this exact structure, no markdown or extra text:
 Each question must have exactly 4 options. correctAnswer is the 0-based index of the correct option. Make questions varied in difficulty and cover different forensic domains.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = await geminiGenerate(prompt);
 
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
@@ -46,15 +36,12 @@ Each question must have exactly 4 options. correctAnswer is the 0-based index of
       return;
     }
 
-    const jsonStr = text.slice(jsonStart, jsonEnd + 1);
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
     const validated = GenerateQuizResponse.parse(parsed);
-
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating quiz");
-    const msg = (err as Error)?.message ?? "Failed to generate quiz questions";
-    res.status(500).json({ error: msg });
+    res.status(500).json({ error: (err as Error)?.message ?? "Failed to generate quiz questions" });
   }
 });
 
