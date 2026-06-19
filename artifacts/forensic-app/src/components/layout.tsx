@@ -17,7 +17,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors" data-testid="link-logo">
             <Fingerprint className="h-6 w-6" />
-            <span className="font-mono text-xl font-bold tracking-tight">ForensiQ</span>
+            <span className="font-mono text-xl font-bold tracking-tight">Criminova</span>
           </Link>
           <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto">
             {navItems.map((item) => {
@@ -46,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-border/50 py-6 text-center text-sm text-muted-foreground">
-        <p className="font-mono">ForensiQ Interactive Lab &copy; {new Date().getFullYear()}</p>
+        <p className="font-mono">Criminova Interactive Lab &copy; {new Date().getFullYear()}</p>
       </footer>
     </div>
   );

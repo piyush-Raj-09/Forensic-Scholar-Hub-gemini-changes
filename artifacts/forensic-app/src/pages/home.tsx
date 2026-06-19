@@ -38,7 +38,7 @@ export default function Home() {
           <Fingerprint className="w-16 h-16 text-primary" />
         </div>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-foreground to-foreground/50">
-          Forensi<span className="text-primary">Q</span>
+          Crimin<span className="text-primary">ova</span>
         </h1>
         <p className="text-xl text-muted-foreground font-mono max-w-2xl mx-auto leading-relaxed">
           Initialize your training simulation. Analyze evidence, decode terminology, and test your investigative intellect.
