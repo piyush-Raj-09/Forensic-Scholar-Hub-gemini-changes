@@ -1,12 +1,8 @@
 import { Router, type IRouter } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GenerateCrosswordResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 function buildGrid(
   clues: Array<{ answer: string; row: number; col: number; direction: string }>,
@@ -32,6 +28,15 @@ function buildGrid(
 
 router.post("/crossword/generate", async (req, res): Promise<void> => {
   req.log.info("Generating forensic crossword");
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
+    return;
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Create a simple crossword puzzle with exactly 8 forensic science terms. Place them on a 15x15 grid (rows and cols 0-14). Mix "across" and "down" directions. Make sure words intersect naturally where possible.
 
@@ -71,31 +76,20 @@ Return ONLY valid JSON, no markdown:
 Make sure length matches the actual answer length. Vary the starting positions so words don't overlap incorrectly. Provide exactly 8 clues with a mix of across and down.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
 
-    const content = message.content[0];
-    if (content.type !== "text") {
-      res.status(500).json({ error: "Unexpected response format from AI" });
-      return;
-    }
-
-    const text = content.text.trim();
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
-      req.log.error({ text }, "No JSON found in AI response");
-      res.status(500).json({ error: "Failed to parse AI response" });
+      req.log.error({ text }, "No JSON found in Gemini response");
+      res.status(500).json({ error: "Failed to parse Gemini response" });
       return;
     }
 
     const jsonStr = text.slice(jsonStart, jsonEnd + 1);
     const parsed = JSON.parse(jsonStr);
 
-    // Add IDs to clues if not present
     if (parsed.clues) {
       parsed.clues = parsed.clues.map((c: { id?: number; length?: number; answer?: string }, i: number) => ({
         ...c,
@@ -111,9 +105,8 @@ Make sure length matches the actual answer length. Vary the starting positions s
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating crossword");
-    const anthropicMsg = (err as { error?: { error?: { message?: string } } })?.error?.error?.message;
-    const fallback = (err as Error)?.message ?? "Failed to generate crossword puzzle";
-    res.status(500).json({ error: anthropicMsg ?? fallback });
+    const msg = (err as Error)?.message ?? "Failed to generate crossword puzzle";
+    res.status(500).json({ error: msg });
   }
 });
 

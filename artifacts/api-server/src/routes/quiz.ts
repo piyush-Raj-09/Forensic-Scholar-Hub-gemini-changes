@@ -1,16 +1,20 @@
 import { Router, type IRouter } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GenerateQuizResponse } from "@workspace/api-zod";
-import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 router.post("/quiz/generate", async (req, res): Promise<void> => {
   req.log.info("Generating forensic quiz questions");
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: "GEMINI_API_KEY is not configured." });
+    return;
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `Generate exactly 8 multiple choice quiz questions about forensic science. Cover diverse domains including: DNA analysis, fingerprinting, ballistics, toxicology, crime scene investigation, forensic pathology, digital forensics, blood spatter analysis, document examination, and forensic anthropology.
 
@@ -31,24 +35,14 @@ Return ONLY valid JSON with this exact structure, no markdown or extra text:
 Each question must have exactly 4 options. correctAnswer is the 0-based index of the correct option. Make questions varied in difficulty and cover different forensic domains.`;
 
   try {
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
 
-    const content = message.content[0];
-    if (content.type !== "text") {
-      res.status(500).json({ error: "Unexpected response format from AI" });
-      return;
-    }
-
-    const text = content.text.trim();
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
-      req.log.error({ text }, "No JSON found in AI response");
-      res.status(500).json({ error: "Failed to parse AI response" });
+      req.log.error({ text }, "No JSON found in Gemini response");
+      res.status(500).json({ error: "Failed to parse Gemini response" });
       return;
     }
 
@@ -59,9 +53,8 @@ Each question must have exactly 4 options. correctAnswer is the 0-based index of
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating quiz");
-    const anthropicMsg = (err as { error?: { error?: { message?: string } } })?.error?.error?.message;
-    const fallback = (err as Error)?.message ?? "Failed to generate quiz questions";
-    res.status(500).json({ error: anthropicMsg ?? fallback });
+    const msg = (err as Error)?.message ?? "Failed to generate quiz questions";
+    res.status(500).json({ error: msg });
   }
 });
 
