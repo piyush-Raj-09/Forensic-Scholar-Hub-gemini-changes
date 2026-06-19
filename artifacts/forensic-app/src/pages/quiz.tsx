@@ -61,6 +61,23 @@ export default function Quiz() {
     return acc + (answers[q.id] === q.correctAnswer ? 1 : 0);
   }, 0);
 
+  if (generateQuiz.isError) {
+    const errMsg = (generateQuiz.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+      ?? (generateQuiz.error as Error)?.message
+      ?? "An unknown error occurred.";
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="error-state">
+        <div className="max-w-lg w-full p-6 rounded-xl border border-destructive/50 bg-destructive/10 space-y-4">
+          <h2 className="font-mono text-destructive text-xl font-bold tracking-widest">GENERATION FAILED</h2>
+          <p className="text-sm text-muted-foreground font-mono break-words">{errMsg}</p>
+          <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10" data-testid="button-retry-quiz">
+            RETRY
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (generateQuiz.isPending) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="loading-state">

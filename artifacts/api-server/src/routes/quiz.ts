@@ -59,7 +59,9 @@ Each question must have exactly 4 options. correctAnswer is the 0-based index of
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating quiz");
-    res.status(500).json({ error: "Failed to generate quiz questions" });
+    const anthropicMsg = (err as { error?: { error?: { message?: string } } })?.error?.error?.message;
+    const fallback = (err as Error)?.message ?? "Failed to generate quiz questions";
+    res.status(500).json({ error: anthropicMsg ?? fallback });
   }
 });
 

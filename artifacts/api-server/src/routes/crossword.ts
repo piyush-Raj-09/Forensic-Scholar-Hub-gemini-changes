@@ -111,7 +111,9 @@ Make sure length matches the actual answer length. Vary the starting positions s
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating crossword");
-    res.status(500).json({ error: "Failed to generate crossword puzzle" });
+    const anthropicMsg = (err as { error?: { error?: { message?: string } } })?.error?.error?.message;
+    const fallback = (err as Error)?.message ?? "Failed to generate crossword puzzle";
+    res.status(500).json({ error: anthropicMsg ?? fallback });
   }
 });
 

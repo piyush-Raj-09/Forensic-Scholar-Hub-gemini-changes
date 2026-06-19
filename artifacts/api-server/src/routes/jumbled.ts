@@ -62,7 +62,9 @@ Rules:
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating jumbled words");
-    res.status(500).json({ error: "Failed to generate jumbled words" });
+    const anthropicMsg = (err as { error?: { error?: { message?: string } } })?.error?.error?.message;
+    const fallback = (err as Error)?.message ?? "Failed to generate jumbled words";
+    res.status(500).json({ error: anthropicMsg ?? fallback });
   }
 });
 

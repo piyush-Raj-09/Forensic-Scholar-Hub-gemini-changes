@@ -30,6 +30,23 @@ export default function Crossword() {
     }));
   };
 
+  if (generateCrossword.isError) {
+    const errMsg = (generateCrossword.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+      ?? (generateCrossword.error as Error)?.message
+      ?? "An unknown error occurred.";
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="error-state">
+        <div className="max-w-lg w-full p-6 rounded-xl border border-destructive/50 bg-destructive/10 space-y-4">
+          <h2 className="font-mono text-destructive text-xl font-bold tracking-widest">GENERATION FAILED</h2>
+          <p className="text-sm text-muted-foreground font-mono break-words">{errMsg}</p>
+          <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10" data-testid="button-retry-crossword">
+            RETRY
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (generateCrossword.isPending) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="loading-state">
