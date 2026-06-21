@@ -94,13 +94,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE - matching dark mode since app is always dark */
 :root {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
-
   --opaque-button-border-intensity: -8;
-
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
@@ -297,4 +294,95 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+}
+
+/* ─── Custom Keyframes ───────────────────────────────────────────────────── */
+@keyframes grid-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes shake {
+  10%, 90%  { transform: translate3d(-2px, 0, 0); }
+  20%, 80%  { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60%  { transform: translate3d(6px, 0, 0); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+  70%  { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+@keyframes float-fp {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.04; }
+  50%       { transform: translateY(-20px) rotate(3deg); opacity: 0.08; }
+}
+
+@keyframes scanline {
+  0%   { top: -4px; }
+  100% { top: 100%; }
+}
+
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0)  scale(1);    filter: blur(0); }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-shake {
+  animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.animate-word-in {
+  animation: word-in 0.4s ease-out both;
+}
+
+.animate-page-in {
+  animation: page-in 0.35s ease-out both;
+}
+
+.animate-float-fp {
+  animation: float-fp 8s ease-in-out infinite;
+}
+
+/* Hero grid background */
+.hero-grid {
+  background-image:
+    linear-gradient(hsl(142 100% 55% / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(142 100% 55% / 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.hero-grid::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, hsl(142 100% 55% / 0.4), transparent);
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
+}
+
+/* Timer ring */
+.timer-ring-track {
+  stroke: hsl(160 15% 18%);
+}
+.timer-ring-progress {
+  stroke: hsl(142 100% 55%);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+  transform-origin: center;
+  transform: rotate(-90deg);
+}
+.timer-ring-danger .timer-ring-progress {
+  stroke: hsl(0 80% 55%);
 }

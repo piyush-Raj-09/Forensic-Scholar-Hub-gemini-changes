@@ -2,15 +2,42 @@ import { useState, useEffect, useRef } from "react";
 import { useGenerateQuiz } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Timer, CheckCircle2, XCircle, AlertCircle, RefreshCw, ClockAlert } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, ClockAlert } from "lucide-react";
 import { DifficultySelector, LevelBadge, type Difficulty } from "@/components/DifficultySelector";
+
+const TOTAL_SECONDS = 300;
+const CIRCUMFERENCE = 2 * Math.PI * 45; // r=45
+
+function CircularTimer({ seconds, danger }: { seconds: number; danger: boolean }) {
+  const progress = seconds / TOTAL_SECONDS;
+  const offset = CIRCUMFERENCE * (1 - progress);
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return (
+    <div className={`relative w-16 h-16 shrink-0 ${danger ? "timer-ring-danger" : ""}`}>
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="none" strokeWidth="6" className="timer-ring-track" />
+        <circle
+          cx="50" cy="50" r="45" fill="none" strokeWidth="6"
+          className="timer-ring-progress"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className={`font-mono font-bold text-xs tabular-nums ${danger ? "text-destructive animate-pulse" : "text-primary"}`}>
+          {m}:{s.toString().padStart(2, "0")}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function Quiz() {
   const generateQuiz = useGenerateQuiz();
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [timeRemaining, setTimeRemaining] = useState(300);
+  const [timeRemaining, setTimeRemaining] = useState(TOTAL_SECONDS);
   const [isFinished, setIsFinished] = useState(false);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [submitWarning, setSubmitWarning] = useState(false);
@@ -29,7 +56,7 @@ export default function Quiz() {
     setIsFinished(false);
     setIsTimeUp(false);
     setSubmitWarning(false);
-    setTimeRemaining(300);
+    setTimeRemaining(TOTAL_SECONDS);
     generateQuiz.mutate({ data: { difficulty } });
   };
 
@@ -40,7 +67,7 @@ export default function Quiz() {
     setIsFinished(false);
     setIsTimeUp(false);
     setSubmitWarning(false);
-    setTimeRemaining(300);
+    setTimeRemaining(TOTAL_SECONDS);
     setDifficulty(null);
   };
 
@@ -48,12 +75,7 @@ export default function Quiz() {
     if (questions.length > 0 && !isFinished) {
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            stopTimer();
-            setIsTimeUp(true);
-            setIsFinished(true);
-            return 0;
-          }
+          if (prev <= 1) { stopTimer(); setIsTimeUp(true); setIsFinished(true); return 0; }
           return prev - 1;
         });
       }, 1000);
@@ -81,12 +103,6 @@ export default function Quiz() {
     setIsFinished(true);
   };
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
   const score = questions.reduce((acc, q) => acc + (answers[q.id] === q.correctAnswer ? 1 : 0), 0);
   const answeredCount = Object.keys(answers).length;
   const allAnswered = answeredCount === questions.length && questions.length > 0;
@@ -104,7 +120,7 @@ export default function Quiz() {
           <p className="text-sm text-muted-foreground font-mono break-words">{errMsg}</p>
           <div className="flex gap-3">
             <Button onClick={handleBack} variant="ghost" className="font-mono">BACK</Button>
-            <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10">RETRY</Button>
+            <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50">RETRY</Button>
           </div>
         </div>
       </div>
@@ -124,118 +140,131 @@ export default function Quiz() {
     );
   }
 
-  // ── Level select / Start screen ──────────────────────────────────────────
+  // ── Start screen ──────────────────────────────────────────────────────────
   if (!questions.length) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        <Card className="max-w-md w-full border-primary/20 bg-card/50 backdrop-blur">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-mono text-primary">Forensic Quiz</CardTitle>
-            <CardDescription className="text-base">8 AI-generated questions with a 5-minute timer.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-2 pb-6">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="text-3xl font-bold text-primary font-mono">Forensic Quiz</h1>
+            <p className="text-muted-foreground text-sm">8 AI-generated questions · 5-minute timer</p>
+          </div>
+          <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur p-6 space-y-6">
             <DifficultySelector selected={difficulty} onSelect={setDifficulty} />
-            <Button
-              size="lg"
-              onClick={handleStart}
-              disabled={!difficulty}
-              className="w-full font-mono font-bold tracking-widest"
-            >
+            <Button size="lg" onClick={handleStart} disabled={!difficulty} className="w-full font-mono font-bold tracking-widest text-base h-12">
               GENERATE QUESTIONS
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   // ── Score card ────────────────────────────────────────────────────────────
   if (isFinished) {
-    const percentage = Math.round((score / questions.length) * 100);
-    const verdict = score >= 7 ? "Excellent analytical skills." : score >= 5 ? "Satisfactory performance." : "Further training required.";
+    const pct = Math.round((score / questions.length) * 100);
+    const verdict = score >= 7 ? "Excellent work, investigator." : score >= 5 ? "Satisfactory performance." : "Further training required.";
+    const circleColor = score >= 7 ? "text-emerald-400 border-emerald-400/40" : score >= 5 ? "text-yellow-400 border-yellow-400/40" : "text-red-400 border-red-400/40";
     return (
-      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <Card className="border-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] bg-card/80 backdrop-blur">
-          <CardHeader className="text-center pb-2">
-            {isTimeUp && (
-              <div className="flex items-center justify-center gap-2 mb-3 px-4 py-2 rounded-md bg-destructive/15 border border-destructive/40 mx-auto w-fit">
-                <ClockAlert className="w-5 h-5 text-destructive" />
-                <span className="font-mono text-destructive font-bold tracking-widest text-sm">TIME UP!</span>
-              </div>
-            )}
-            <CardTitle className="text-4xl font-mono text-primary">{isTimeUp ? "TIME EXPIRED" : "EVALUATION COMPLETE"}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-6 pt-6">
-            <div className="inline-flex flex-col items-center justify-center w-36 h-36 rounded-full border-4 border-primary/30 bg-primary/5 gap-1">
-              <span className="text-5xl font-bold text-foreground leading-none">
-                {score}<span className="text-2xl text-muted-foreground">/{questions.length}</span>
-              </span>
-              <span className="text-sm font-mono text-primary">{percentage}%</span>
+      <div className="max-w-3xl mx-auto space-y-8 animate-page-in">
+        <Card className="border-primary/30 shadow-[0_0_40px_hsl(var(--primary)/0.1)] bg-card/80 backdrop-blur overflow-hidden">
+          {isTimeUp && (
+            <div className="bg-destructive/10 border-b border-destructive/30 px-6 py-3 flex items-center gap-2">
+              <ClockAlert className="w-4 h-4 text-destructive shrink-0" />
+              <span className="font-mono text-destructive text-sm font-bold tracking-widest">TIME EXPIRED — Quiz auto-submitted</span>
             </div>
-            <p className="text-xl text-muted-foreground">{verdict}</p>
+          )}
+          <div className="p-8 text-center space-y-6">
+            <h2 className="text-3xl font-mono font-black text-foreground tracking-tight">
+              {isTimeUp ? "TIME'S UP" : "QUIZ COMPLETE"}
+            </h2>
+
+            <div className={`inline-flex flex-col items-center justify-center w-36 h-36 rounded-full border-4 ${circleColor} bg-card/50 mx-auto`}>
+              <span className="text-5xl font-black leading-none">{score}</span>
+              <span className="text-base text-muted-foreground font-mono">/ {questions.length}</span>
+              <span className="text-xs font-mono text-primary mt-1">{pct}%</span>
+            </div>
+
+            <p className="text-lg text-muted-foreground">{verdict}</p>
+
             {answeredCount < questions.length && (
-              <p className="text-sm text-muted-foreground font-mono">
-                {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} unanswered.
+              <p className="text-sm text-muted-foreground/60 font-mono">
+                {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} unanswered
               </p>
             )}
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <Button variant="outline" onClick={handleBack} className="font-mono tracking-widest">
-                CHANGE LEVEL
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button variant="outline" onClick={handleBack} className="font-mono w-full sm:w-auto">
+                ← Change Level
               </Button>
-              <Button size="lg" onClick={handleStart} className="font-mono tracking-widest">
+              <Button size="lg" onClick={handleStart} className="font-mono font-bold w-full sm:w-auto px-8">
                 <RefreshCw className="w-4 h-4 mr-2" /> TRY AGAIN
               </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        <div className="space-y-6">
-          <h3 className="text-2xl font-mono text-foreground border-b border-border/50 pb-2">Detailed Report</h3>
+        {/* Detailed report */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-mono font-bold text-muted-foreground uppercase tracking-widest border-b border-border/40 pb-3">
+            Question Review
+          </h3>
           {questions.map((q, idx) => {
             const userAnswer = answers[q.id];
             const isCorrect = userAnswer === q.correctAnswer;
             const isUnanswered = userAnswer === undefined;
             return (
-              <Card key={q.id} className={`border-l-4 ${isCorrect ? "border-l-emerald-500" : isUnanswered ? "border-l-muted" : "border-l-destructive"}`}>
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="mt-1">
-                      {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : isUnanswered ? <AlertCircle className="w-6 h-6 text-muted-foreground" /> : <XCircle className="w-6 h-6 text-destructive" />}
+              <Card key={q.id}
+                className={`border-l-[3px] transition-colors
+                  ${isCorrect ? "border-l-emerald-500 bg-emerald-500/[0.02]"
+                  : isUnanswered ? "border-l-border bg-card/20"
+                  : "border-l-destructive bg-destructive/[0.02]"}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 shrink-0">
+                      {isCorrect ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        : isUnanswered ? <AlertCircle className="w-5 h-5 text-muted-foreground/40" />
+                        : <XCircle className="w-5 h-5 text-destructive" />}
                     </div>
-                    <div>
-                      <CardDescription className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">Question {idx + 1} • {q.domain}</CardDescription>
-                      <CardTitle className="text-lg leading-relaxed">{q.question}</CardTitle>
+                    <div className="min-w-0">
+                      <CardDescription className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                        Q{idx + 1} · {q.domain}
+                      </CardDescription>
+                      <CardTitle className="text-base leading-snug font-medium">{q.question}</CardTitle>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-10">
+                <CardContent className="pt-0 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8">
                     {q.options.map((opt, optIdx) => {
                       const isSelected = userAnswer === optIdx;
                       const isActualCorrect = q.correctAnswer === optIdx;
-                      let bgClass = "bg-muted/30 border-transparent text-muted-foreground";
-                      if (isActualCorrect) bgClass = "bg-emerald-500/10 border-emerald-500/50 text-emerald-400";
-                      else if (isSelected && !isActualCorrect) bgClass = "bg-destructive/10 border-destructive/50 text-destructive";
+                      let cls = "p-3 rounded-lg border text-sm flex items-center justify-between gap-2";
+                      if (isActualCorrect) cls += " bg-emerald-500/10 border-emerald-500/40 text-emerald-400";
+                      else if (isSelected) cls += " bg-destructive/10 border-destructive/40 text-destructive";
+                      else cls += " bg-muted/20 border-transparent text-muted-foreground";
                       return (
-                        <div key={optIdx} className={`p-3 rounded border ${bgClass} text-sm flex items-center justify-between`}>
-                          <span>{opt}</span>
-                          {isActualCorrect && <CheckCircle2 className="w-4 h-4 shrink-0 ml-2" />}
-                          {isSelected && !isActualCorrect && <XCircle className="w-4 h-4 shrink-0 ml-2" />}
+                        <div key={optIdx} className={cls}>
+                          <span className="leading-snug">{opt}</span>
+                          {isActualCorrect && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                          {isSelected && !isActualCorrect && <XCircle className="w-4 h-4 shrink-0" />}
                         </div>
                       );
                     })}
                   </div>
-                  {!isUnanswered ? (
-                    <div className="pl-10 mt-2 p-4 bg-muted/20 rounded-md border border-border/50 text-sm">
-                      <span className="font-mono text-primary font-bold mr-2">Explanation:</span>
-                      <span className="text-muted-foreground">{q.explanation}</span>
-                    </div>
-                  ) : (
-                    <div className="pl-10 mt-2 p-4 bg-muted/10 rounded-md border border-border/30 text-sm">
-                      <span className="font-mono text-primary font-bold mr-2">Correct answer:</span>
-                      <span className="text-emerald-400">{q.options[q.correctAnswer]}</span>
-                    </div>
-                  )}
+                  <div className="pl-8">
+                    {!isUnanswered ? (
+                      <div className="p-3 bg-muted/15 rounded-lg border border-border/30 text-sm">
+                        <span className="font-mono text-primary text-xs font-bold mr-2 uppercase tracking-wider">Explanation</span>
+                        <span className="text-muted-foreground">{q.explanation}</span>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-muted/10 rounded-lg border border-border/20 text-sm">
+                        <span className="font-mono text-xs font-bold mr-2 uppercase tracking-wider text-muted-foreground">Correct answer </span>
+                        <span className="text-emerald-400 font-medium">{q.options[q.correctAnswer]}</span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -247,52 +276,81 @@ export default function Quiz() {
 
   // ── Active quiz ───────────────────────────────────────────────────────────
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between sticky top-[72px] z-40 bg-background/80 backdrop-blur-md p-4 rounded-lg border border-border/50 shadow-sm gap-4">
+    <div className="max-w-4xl mx-auto space-y-5">
+      {/* Sticky header */}
+      <div className="sticky top-[56px] z-40 bg-background/80 backdrop-blur-xl border border-border/40 rounded-2xl px-4 py-3 flex items-center gap-4 shadow-sm">
         {difficulty && <LevelBadge difficulty={difficulty} onBack={handleBack} />}
-        <div className="flex-1">
-          <div className="flex justify-between mb-2">
-            <span className="text-sm font-mono text-muted-foreground">Progress: {answeredCount}/{questions.length}</span>
-            <span className={`text-sm font-mono flex items-center gap-1 ${isDangerTime ? "text-destructive font-bold animate-pulse" : "text-primary"}`}>
-              <Timer className="w-4 h-4" /> {formatTime(timeRemaining)}
+
+        {/* Progress */}
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-xs font-mono text-muted-foreground">
+              Question <span className="text-foreground font-bold">{Math.min(answeredCount + 1, questions.length)}</span> of {questions.length}
+            </span>
+            <span className="text-xs font-mono text-muted-foreground">
+              {answeredCount}/{questions.length} answered
             </span>
           </div>
-          <Progress value={(answeredCount / questions.length) * 100} className="h-2" />
+          <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500 shadow-[0_0_8px_hsl(var(--primary)/0.5)]"
+              style={{ width: `${(answeredCount / questions.length) * 100}%` }}
+            />
+          </div>
         </div>
+
+        {/* Circular timer */}
+        <CircularTimer seconds={timeRemaining} danger={isDangerTime} />
       </div>
 
-      <div className="space-y-6 pt-4">
+      {/* Questions */}
+      <div className="space-y-4 pt-2">
         {questions.map((q, idx) => {
           const userAnswer = answers[q.id];
-          const highlightUnanswered = submitWarning && userAnswer === undefined;
+          const isUnanswered = userAnswer === undefined;
+          const highlight = submitWarning && isUnanswered;
           return (
             <Card
               key={q.id}
               id={`question-${q.id}`}
-              className={`border-border/50 bg-card/30 transition-all duration-300 ${highlightUnanswered ? "border-destructive/60 shadow-[0_0_12px_hsl(var(--destructive)/0.25)]" : ""}`}
+              className={`border transition-all duration-300 bg-card/30
+                ${highlight ? "border-destructive/50 shadow-[0_0_16px_hsl(var(--destructive)/0.2)]" : "border-border/40"}`}
             >
-              <CardHeader>
-                <CardDescription className="font-mono text-primary/80 uppercase tracking-widest text-xs mb-2">
-                  Query {idx + 1} • {q.domain}
-                  {highlightUnanswered && <span className="ml-2 text-destructive font-bold">— Unanswered</span>}
-                </CardDescription>
-                <CardTitle className="text-xl leading-relaxed">{q.question}</CardTitle>
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardDescription className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-1.5">
+                      Q{idx + 1} of {questions.length} · {q.domain}
+                      {highlight && <span className="ml-2 text-destructive">⚠ Unanswered</span>}
+                    </CardDescription>
+                    <CardTitle className="text-lg leading-snug font-semibold">{q.question}</CardTitle>
+                  </div>
+                  <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-mono text-sm font-bold border
+                    ${userAnswer !== undefined ? "bg-primary/10 border-primary/40 text-primary" : "bg-muted/30 border-border/40 text-muted-foreground"}`}>
+                    {idx + 1}
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {q.options.map((opt, optIdx) => {
                   const isSelected = userAnswer === optIdx;
                   return (
                     <button
                       key={optIdx}
                       onClick={() => handleAnswer(q.id, optIdx)}
-                      className={`text-left p-4 rounded-md border transition-all duration-200 flex items-start gap-3
-                        ${isSelected ? "bg-primary/10 border-primary shadow-[0_0_15px_hsl(var(--primary)/0.15)] ring-1 ring-primary/50" : "bg-muted/20 border-transparent hover:bg-muted hover:border-primary/30"}
-                      `}
+                      className={`text-left px-4 py-3.5 rounded-xl border transition-all duration-150 flex items-center gap-3 group
+                        ${isSelected
+                          ? "bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_16px_rgba(52,211,153,0.12)] ring-1 ring-emerald-500/30"
+                          : "bg-muted/15 border-border/30 hover:bg-muted/30 hover:border-primary/30"
+                        }`}
                     >
-                      <div className={`w-6 h-6 shrink-0 rounded-full border flex items-center justify-center font-mono text-xs ${isSelected ? "border-primary text-primary" : "border-muted-foreground/50 text-muted-foreground"}`}>
-                        {String.fromCharCode(65 + optIdx)}
+                      <div className={`w-7 h-7 shrink-0 rounded-full border-2 flex items-center justify-center font-mono text-xs font-bold transition-colors
+                        ${isSelected ? "border-emerald-500 bg-emerald-500 text-black" : "border-border/50 text-muted-foreground group-hover:border-primary/50"}`}>
+                        {isSelected ? <CheckCircle2 className="w-4 h-4" /> : String.fromCharCode(65 + optIdx)}
                       </div>
-                      <span className={isSelected ? "text-foreground font-medium" : "text-muted-foreground"}>{opt}</span>
+                      <span className={`text-sm leading-snug ${isSelected ? "text-emerald-300 font-medium" : "text-muted-foreground group-hover:text-foreground"}`}>
+                        {opt}
+                      </span>
                     </button>
                   );
                 })}
@@ -302,23 +360,27 @@ export default function Quiz() {
         })}
       </div>
 
-      <div className="pt-4 pb-10 flex flex-col items-center gap-3">
+      {/* Submit section */}
+      <div className="pt-6 pb-12 flex flex-col items-center gap-4">
         {submitWarning && (
-          <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/40 text-destructive font-mono text-sm animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive font-mono text-sm w-full max-w-sm justify-center animate-in fade-in duration-200">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            Please answer all questions before submitting — {questions.length - answeredCount} remaining.
+            {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} still unanswered
           </div>
         )}
         <Button
           size="lg"
           onClick={handleSubmit}
-          className={`font-mono font-bold tracking-widest px-12 transition-all duration-200 ${allAnswered ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_hsl(var(--primary)/0.3)]" : "opacity-80"}`}
+          className={`font-mono font-black tracking-widest px-16 h-14 text-base transition-all duration-200 rounded-2xl
+            ${allAnswered
+              ? "shadow-[0_0_30px_hsl(var(--primary)/0.4)] scale-100"
+              : "opacity-75 scale-95"}`}
         >
           SUBMIT QUIZ
         </Button>
         {!allAnswered && (
-          <p className="text-xs font-mono text-muted-foreground">
-            {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} remaining
+          <p className="text-xs font-mono text-muted-foreground/50">
+            {questions.length - answeredCount} answer{questions.length - answeredCount !== 1 ? "s" : ""} remaining
           </p>
         )}
       </div>

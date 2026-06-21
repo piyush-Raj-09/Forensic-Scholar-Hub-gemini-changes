@@ -13,13 +13,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background text-foreground selection:bg-primary/30">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors" data-testid="link-logo">
-            <Fingerprint className="h-6 w-6" />
-            <span className="font-mono text-xl font-bold tracking-tight">Criminova</span>
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      <header className="border-b border-border/40 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 h-14 flex items-center justify-between max-w-6xl">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 group"
+            data-testid="link-logo"
+          >
+            <div className="relative">
+              <Fingerprint className="h-6 w-6 text-primary transition-all duration-300 group-hover:drop-shadow-[0_0_8px_hsl(142,100%,55%)]" />
+            </div>
+            <span className="font-mono text-lg font-bold tracking-tight text-foreground">
+              Crimi<span className="text-primary">nova</span>
+            </span>
           </Link>
-          <nav className="flex items-center gap-1 md:gap-4 overflow-x-auto">
+
+          <nav className="flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -27,26 +37,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
+                  className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all duration-200 rounded-md
+                    ${isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
                   data-testid={`link-nav-${item.label.toLowerCase()}`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden md:inline">{item.label}</span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="hidden sm:inline">{item.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-primary shadow-[0_0_8px_hsl(142,100%,55%)]" />
+                  )}
                 </Link>
               );
             })}
           </nav>
         </div>
       </header>
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+
+      {/* ── Page content ───────────────────────────────────────────────────── */}
+      <main className="flex-1 container mx-auto px-4 sm:px-6 py-8 max-w-5xl animate-page-in">
         {children}
       </main>
-      <footer className="border-t border-border/50 py-6 text-center text-sm text-muted-foreground">
-        <p className="font-mono">Criminova Interactive Lab &copy; {new Date().getFullYear()}</p>
+
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-border/40 py-5 text-center">
+        <p className="font-mono text-xs text-muted-foreground/60 tracking-widest uppercase">
+          Criminova Interactive Lab &copy; {new Date().getFullYear()}
+        </p>
       </footer>
     </div>
   );
