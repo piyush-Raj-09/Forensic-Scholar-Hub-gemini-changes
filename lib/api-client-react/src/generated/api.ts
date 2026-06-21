@@ -21,6 +21,7 @@ import type {
 
 import type {
   CrosswordResponse,
+  DifficultyRequest,
   ErrorResponse,
   HealthStatus,
   JumbledResponse,
@@ -28,7 +29,7 @@ import type {
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -129,14 +130,15 @@ export const getGenerateQuizUrl = () => {
  * Generates 8 random MCQ questions via Claude API
  * @summary Generate forensic quiz questions
  */
-export const generateQuiz = async ( options?: RequestInit): Promise<QuizResponse> => {
+export const generateQuiz = async (difficultyRequest: DifficultyRequest, options?: RequestInit): Promise<QuizResponse> => {
 
   return customFetch<QuizResponse>(getGenerateQuizUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      difficultyRequest,)
   }
 );}
 
@@ -144,8 +146,8 @@ export const generateQuiz = async ( options?: RequestInit): Promise<QuizResponse
 
 
 export const getGenerateQuizMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,{data: BodyType<DifficultyRequest>}, TContext> => {
 
 const mutationKey = ['generateQuiz'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -157,10 +159,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateQuiz>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateQuiz>>, {data: BodyType<DifficultyRequest>}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  generateQuiz(requestOptions)
+          return  generateQuiz(data,requestOptions)
         }
 
 
@@ -171,18 +173,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type GenerateQuizMutationResult = NonNullable<Awaited<ReturnType<typeof generateQuiz>>>
-
+    export type GenerateQuizMutationBody = BodyType<DifficultyRequest>
     export type GenerateQuizMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Generate forensic quiz questions
  */
 export const useGenerateQuiz = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateQuiz>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof generateQuiz>>,
         TError,
-        void,
+        {data: BodyType<DifficultyRequest>},
         TContext
       > => {
       return useMutation(getGenerateQuizMutationOptions(options));
@@ -200,14 +202,15 @@ export const getGenerateJumbledUrl = () => {
  * Generates 8 scrambled forensic terms with hints via Claude API
  * @summary Generate jumbled forensic words
  */
-export const generateJumbled = async ( options?: RequestInit): Promise<JumbledResponse> => {
+export const generateJumbled = async (difficultyRequest: DifficultyRequest, options?: RequestInit): Promise<JumbledResponse> => {
 
   return customFetch<JumbledResponse>(getGenerateJumbledUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      difficultyRequest,)
   }
 );}
 
@@ -215,8 +218,8 @@ export const generateJumbled = async ( options?: RequestInit): Promise<JumbledRe
 
 
 export const getGenerateJumbledMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,{data: BodyType<DifficultyRequest>}, TContext> => {
 
 const mutationKey = ['generateJumbled'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -228,10 +231,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateJumbled>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateJumbled>>, {data: BodyType<DifficultyRequest>}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  generateJumbled(requestOptions)
+          return  generateJumbled(data,requestOptions)
         }
 
 
@@ -242,18 +245,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type GenerateJumbledMutationResult = NonNullable<Awaited<ReturnType<typeof generateJumbled>>>
-
+    export type GenerateJumbledMutationBody = BodyType<DifficultyRequest>
     export type GenerateJumbledMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Generate jumbled forensic words
  */
 export const useGenerateJumbled = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateJumbled>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof generateJumbled>>,
         TError,
-        void,
+        {data: BodyType<DifficultyRequest>},
         TContext
       > => {
       return useMutation(getGenerateJumbledMutationOptions(options));
@@ -271,14 +274,15 @@ export const getGenerateCrosswordUrl = () => {
  * Generates 8 forensic terms with clues for a crossword via Claude API
  * @summary Generate forensic crossword puzzle
  */
-export const generateCrossword = async ( options?: RequestInit): Promise<CrosswordResponse> => {
+export const generateCrossword = async (difficultyRequest: DifficultyRequest, options?: RequestInit): Promise<CrosswordResponse> => {
 
   return customFetch<CrosswordResponse>(getGenerateCrosswordUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      difficultyRequest,)
   }
 );}
 
@@ -286,8 +290,8 @@ export const generateCrossword = async ( options?: RequestInit): Promise<Crosswo
 
 
 export const getGenerateCrosswordMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,{data: BodyType<DifficultyRequest>}, TContext> => {
 
 const mutationKey = ['generateCrossword'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -299,10 +303,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateCrossword>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateCrossword>>, {data: BodyType<DifficultyRequest>}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  generateCrossword(requestOptions)
+          return  generateCrossword(data,requestOptions)
         }
 
 
@@ -313,18 +317,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type GenerateCrosswordMutationResult = NonNullable<Awaited<ReturnType<typeof generateCrossword>>>
-
+    export type GenerateCrosswordMutationBody = BodyType<DifficultyRequest>
     export type GenerateCrosswordMutationError = ErrorType<ErrorResponse>
 
     /**
  * @summary Generate forensic crossword puzzle
  */
 export const useGenerateCrossword = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrossword>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof generateCrossword>>,
         TError,
-        void,
+        {data: BodyType<DifficultyRequest>},
         TContext
       > => {
       return useMutation(getGenerateCrosswordMutationOptions(options));

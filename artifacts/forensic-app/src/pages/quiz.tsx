@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Timer, CheckCircle2, XCircle, AlertCircle, RefreshCw, ClockAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { DifficultySelector, LevelBadge, type Difficulty } from "@/components/DifficultySelector";
 
 export default function Quiz() {
   const generateQuiz = useGenerateQuiz();
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [timeRemaining, setTimeRemaining] = useState(300);
   const [isFinished, setIsFinished] = useState(false);
@@ -17,23 +19,31 @@ export default function Quiz() {
   const questions = generateQuiz.data?.questions ?? [];
 
   const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   };
 
   const handleStart = () => {
+    if (!difficulty) return;
     stopTimer();
     setAnswers({});
     setIsFinished(false);
     setIsTimeUp(false);
     setSubmitWarning(false);
     setTimeRemaining(300);
-    generateQuiz.mutate(undefined);
+    generateQuiz.mutate({ data: { difficulty } });
   };
 
-  // Start the countdown once questions load
+  const handleBack = () => {
+    stopTimer();
+    generateQuiz.reset();
+    setAnswers({});
+    setIsFinished(false);
+    setIsTimeUp(false);
+    setSubmitWarning(false);
+    setTimeRemaining(300);
+    setDifficulty(null);
+  };
+
   useEffect(() => {
     if (questions.length > 0 && !isFinished) {
       timerRef.current = setInterval(() => {
@@ -59,10 +69,8 @@ export default function Quiz() {
   };
 
   const handleSubmit = () => {
-    const answeredCount = Object.keys(answers).length;
-    if (answeredCount < questions.length) {
+    if (Object.keys(answers).length < questions.length) {
       setSubmitWarning(true);
-      // Scroll to the first unanswered question
       const firstUnanswered = questions.find((q) => answers[q.id] === undefined);
       if (firstUnanswered) {
         document.getElementById(`question-${firstUnanswered.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -84,29 +92,29 @@ export default function Quiz() {
   const allAnswered = answeredCount === questions.length && questions.length > 0;
   const isDangerTime = timeRemaining < 60;
 
-  // ── Error state ──────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (generateQuiz.isError) {
     const errMsg =
       (generateQuiz.error as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-      (generateQuiz.error as Error)?.message ??
-      "An unknown error occurred.";
+      (generateQuiz.error as Error)?.message ?? "An unknown error occurred.";
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="error-state">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="max-w-lg w-full p-6 rounded-xl border border-destructive/50 bg-destructive/10 space-y-4">
           <h2 className="font-mono text-destructive text-xl font-bold tracking-widest">GENERATION FAILED</h2>
           <p className="text-sm text-muted-foreground font-mono break-words">{errMsg}</p>
-          <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10" data-testid="button-retry-quiz">
-            RETRY
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={handleBack} variant="ghost" className="font-mono">BACK</Button>
+            <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10">RETRY</Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (generateQuiz.isPending) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="loading-state">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="relative">
           <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-ping" />
           <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
@@ -116,17 +124,23 @@ export default function Quiz() {
     );
   }
 
-  // ── Start screen ──────────────────────────────────────────────────────────
+  // ── Level select / Start screen ──────────────────────────────────────────
   if (!questions.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <Card className="max-w-md w-full border-primary/20 bg-card/50 backdrop-blur">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-mono text-primary">Forensic Quiz</CardTitle>
-            <CardDescription className="text-lg">Test your knowledge with 8 AI-generated questions.</CardDescription>
+            <CardDescription className="text-base">8 AI-generated questions with a 5-minute timer.</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Button size="lg" onClick={handleStart} className="font-mono font-bold tracking-widest px-8" data-testid="button-start-quiz">
+          <CardContent className="space-y-6 pt-2 pb-6">
+            <DifficultySelector selected={difficulty} onSelect={setDifficulty} />
+            <Button
+              size="lg"
+              onClick={handleStart}
+              disabled={!difficulty}
+              className="w-full font-mono font-bold tracking-widest"
+            >
               GENERATE QUESTIONS
             </Button>
           </CardContent>
@@ -138,11 +152,7 @@ export default function Quiz() {
   // ── Score card ────────────────────────────────────────────────────────────
   if (isFinished) {
     const percentage = Math.round((score / questions.length) * 100);
-    const verdict =
-      score >= 7 ? "Excellent analytical skills." :
-      score >= 5 ? "Satisfactory performance." :
-      "Further training required.";
-
+    const verdict = score >= 7 ? "Excellent analytical skills." : score >= 5 ? "Satisfactory performance." : "Further training required.";
     return (
       <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Card className="border-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] bg-card/80 backdrop-blur">
@@ -153,9 +163,7 @@ export default function Quiz() {
                 <span className="font-mono text-destructive font-bold tracking-widest text-sm">TIME UP!</span>
               </div>
             )}
-            <CardTitle className="text-4xl font-mono text-primary">
-              {isTimeUp ? "TIME EXPIRED" : "EVALUATION COMPLETE"}
-            </CardTitle>
+            <CardTitle className="text-4xl font-mono text-primary">{isTimeUp ? "TIME EXPIRED" : "EVALUATION COMPLETE"}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-6 pt-6">
             <div className="inline-flex flex-col items-center justify-center w-36 h-36 rounded-full border-4 border-primary/30 bg-primary/5 gap-1">
@@ -167,12 +175,17 @@ export default function Quiz() {
             <p className="text-xl text-muted-foreground">{verdict}</p>
             {answeredCount < questions.length && (
               <p className="text-sm text-muted-foreground font-mono">
-                {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} left unanswered.
+                {questions.length - answeredCount} question{questions.length - answeredCount !== 1 ? "s" : ""} unanswered.
               </p>
             )}
-            <Button size="lg" onClick={handleStart} className="font-mono tracking-widest mt-4" data-testid="button-try-again">
-              <RefreshCw className="w-4 h-4 mr-2" /> TRY AGAIN
-            </Button>
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <Button variant="outline" onClick={handleBack} className="font-mono tracking-widest">
+                CHANGE LEVEL
+              </Button>
+              <Button size="lg" onClick={handleStart} className="font-mono tracking-widest">
+                <RefreshCw className="w-4 h-4 mr-2" /> TRY AGAIN
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -183,23 +196,14 @@ export default function Quiz() {
             const isCorrect = userAnswer === q.correctAnswer;
             const isUnanswered = userAnswer === undefined;
             return (
-              <Card
-                key={q.id}
-                className={`border-l-4 ${isCorrect ? "border-l-emerald-500" : isUnanswered ? "border-l-muted" : "border-l-destructive"}`}
-              >
+              <Card key={q.id} className={`border-l-4 ${isCorrect ? "border-l-emerald-500" : isUnanswered ? "border-l-muted" : "border-l-destructive"}`}>
                 <CardHeader>
                   <div className="flex items-start gap-4">
                     <div className="mt-1">
-                      {isCorrect
-                        ? <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                        : isUnanswered
-                        ? <AlertCircle className="w-6 h-6 text-muted-foreground" />
-                        : <XCircle className="w-6 h-6 text-destructive" />}
+                      {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : isUnanswered ? <AlertCircle className="w-6 h-6 text-muted-foreground" /> : <XCircle className="w-6 h-6 text-destructive" />}
                     </div>
                     <div>
-                      <CardDescription className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                        Question {idx + 1} • {q.domain}
-                      </CardDescription>
+                      <CardDescription className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-1">Question {idx + 1} • {q.domain}</CardDescription>
                       <CardTitle className="text-lg leading-relaxed">{q.question}</CardTitle>
                     </div>
                   </div>
@@ -221,13 +225,12 @@ export default function Quiz() {
                       );
                     })}
                   </div>
-                  {!isUnanswered && (
+                  {!isUnanswered ? (
                     <div className="pl-10 mt-2 p-4 bg-muted/20 rounded-md border border-border/50 text-sm">
                       <span className="font-mono text-primary font-bold mr-2">Explanation:</span>
                       <span className="text-muted-foreground">{q.explanation}</span>
                     </div>
-                  )}
-                  {isUnanswered && (
+                  ) : (
                     <div className="pl-10 mt-2 p-4 bg-muted/10 rounded-md border border-border/30 text-sm">
                       <span className="font-mono text-primary font-bold mr-2">Correct answer:</span>
                       <span className="text-emerald-400">{q.options[q.correctAnswer]}</span>
@@ -245,13 +248,11 @@ export default function Quiz() {
   // ── Active quiz ───────────────────────────────────────────────────────────
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Sticky header */}
-      <div className="flex items-center justify-between sticky top-[72px] z-40 bg-background/80 backdrop-blur-md p-4 rounded-lg border border-border/50 shadow-sm">
+      <div className="flex items-center justify-between sticky top-[72px] z-40 bg-background/80 backdrop-blur-md p-4 rounded-lg border border-border/50 shadow-sm gap-4">
+        {difficulty && <LevelBadge difficulty={difficulty} onBack={handleBack} />}
         <div className="flex-1">
           <div className="flex justify-between mb-2">
-            <span className="text-sm font-mono text-muted-foreground">
-              Progress: {answeredCount}/{questions.length}
-            </span>
+            <span className="text-sm font-mono text-muted-foreground">Progress: {answeredCount}/{questions.length}</span>
             <span className={`text-sm font-mono flex items-center gap-1 ${isDangerTime ? "text-destructive font-bold animate-pulse" : "text-primary"}`}>
               <Timer className="w-4 h-4" /> {formatTime(timeRemaining)}
             </span>
@@ -260,12 +261,10 @@ export default function Quiz() {
         </div>
       </div>
 
-      {/* Questions */}
       <div className="space-y-6 pt-4">
         {questions.map((q, idx) => {
           const userAnswer = answers[q.id];
-          const isUnanswered = userAnswer === undefined;
-          const highlightUnanswered = submitWarning && isUnanswered;
+          const highlightUnanswered = submitWarning && userAnswer === undefined;
           return (
             <Card
               key={q.id}
@@ -275,9 +274,7 @@ export default function Quiz() {
               <CardHeader>
                 <CardDescription className="font-mono text-primary/80 uppercase tracking-widest text-xs mb-2">
                   Query {idx + 1} • {q.domain}
-                  {highlightUnanswered && (
-                    <span className="ml-2 text-destructive font-bold">— Unanswered</span>
-                  )}
+                  {highlightUnanswered && <span className="ml-2 text-destructive font-bold">— Unanswered</span>}
                 </CardDescription>
                 <CardTitle className="text-xl leading-relaxed">{q.question}</CardTitle>
               </CardHeader>
@@ -289,16 +286,10 @@ export default function Quiz() {
                       key={optIdx}
                       onClick={() => handleAnswer(q.id, optIdx)}
                       className={`text-left p-4 rounded-md border transition-all duration-200 flex items-start gap-3
-                        ${isSelected
-                          ? "bg-primary/10 border-primary shadow-[0_0_15px_hsl(var(--primary)/0.15)] ring-1 ring-primary/50"
-                          : "bg-muted/20 border-transparent hover:bg-muted hover:border-primary/30"
-                        }
+                        ${isSelected ? "bg-primary/10 border-primary shadow-[0_0_15px_hsl(var(--primary)/0.15)] ring-1 ring-primary/50" : "bg-muted/20 border-transparent hover:bg-muted hover:border-primary/30"}
                       `}
-                      data-testid={`btn-option-${q.id}-${optIdx}`}
                     >
-                      <div className={`w-6 h-6 shrink-0 rounded-full border flex items-center justify-center font-mono text-xs
-                        ${isSelected ? "border-primary text-primary" : "border-muted-foreground/50 text-muted-foreground"}
-                      `}>
+                      <div className={`w-6 h-6 shrink-0 rounded-full border flex items-center justify-center font-mono text-xs ${isSelected ? "border-primary text-primary" : "border-muted-foreground/50 text-muted-foreground"}`}>
                         {String.fromCharCode(65 + optIdx)}
                       </div>
                       <span className={isSelected ? "text-foreground font-medium" : "text-muted-foreground"}>{opt}</span>
@@ -311,7 +302,6 @@ export default function Quiz() {
         })}
       </div>
 
-      {/* Submit section */}
       <div className="pt-4 pb-10 flex flex-col items-center gap-3">
         {submitWarning && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/40 text-destructive font-mono text-sm animate-in fade-in duration-200">
@@ -322,12 +312,7 @@ export default function Quiz() {
         <Button
           size="lg"
           onClick={handleSubmit}
-          className={`font-mono font-bold tracking-widest px-12 transition-all duration-200 ${
-            allAnswered
-              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
-              : "opacity-80"
-          }`}
-          data-testid="button-submit-quiz"
+          className={`font-mono font-bold tracking-widest px-12 transition-all duration-200 ${allAnswered ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_hsl(var(--primary)/0.3)]" : "opacity-80"}`}
         >
           SUBMIT QUIZ
         </Button>

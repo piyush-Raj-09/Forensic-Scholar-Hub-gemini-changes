@@ -37,6 +37,12 @@ paths:
       tags: [quiz]
       summary: Generate forensic quiz questions
       description: Generates 8 random MCQ questions via Claude API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DifficultyRequest"
       responses:
         "200":
           description: Quiz questions generated
@@ -57,6 +63,12 @@ paths:
       tags: [jumbled]
       summary: Generate jumbled forensic words
       description: Generates 8 scrambled forensic terms with hints via Claude API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DifficultyRequest"
       responses:
         "200":
           description: Jumbled words generated
@@ -77,6 +89,12 @@ paths:
       tags: [crossword]
       summary: Generate forensic crossword puzzle
       description: Generates 8 forensic terms with clues for a crossword via Claude API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DifficultyRequest"
       responses:
         "200":
           description: Crossword generated
@@ -100,6 +118,15 @@ components:
           type: string
       required:
         - status
+
+    DifficultyRequest:
+      type: object
+      properties:
+        difficulty:
+          type: string
+          enum: [easy, intermediate, hard]
+      required:
+        - difficulty
 
     ErrorResponse:
       type: object

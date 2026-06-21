@@ -5,27 +5,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Loader2, KeyRound, CheckCircle2, RefreshCw, Eye } from "lucide-react";
 import type { JumbledWord } from "@workspace/api-client-react";
+import { DifficultySelector, LevelBadge, type Difficulty } from "@/components/DifficultySelector";
 
 export default function Jumbled() {
   const generateJumbled = useGenerateJumbled();
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [inputs, setInputs] = useState<Record<number, string>>({});
   const [statuses, setStatuses] = useState<Record<number, "idle" | "correct" | "wrong" | "revealed">>({});
 
-  const words = generateJumbled.data?.words || [];
+  const words = generateJumbled.data?.words ?? [];
 
   const handleStart = () => {
+    if (!difficulty) return;
     setInputs({});
     setStatuses({});
-    generateJumbled.mutate(undefined);
+    generateJumbled.mutate({ data: { difficulty } });
+  };
+
+  const handleBack = () => {
+    generateJumbled.reset();
+    setInputs({});
+    setStatuses({});
+    setDifficulty(null);
   };
 
   const handleCheck = (word: JumbledWord) => {
-    const input = inputs[word.id] || "";
+    const input = inputs[word.id] ?? "";
     if (input.trim().toLowerCase() === word.answer.toLowerCase()) {
       setStatuses((prev) => ({ ...prev, [word.id]: "correct" }));
     } else {
       setStatuses((prev) => ({ ...prev, [word.id]: "wrong" }));
-      // Auto-reset wrong status after animation
       setTimeout(() => {
         setStatuses((prev) => {
           if (prev[word.id] === "wrong") return { ...prev, [word.id]: "idle" };
@@ -40,28 +49,31 @@ export default function Jumbled() {
     setStatuses((prev) => ({ ...prev, [id]: "revealed" }));
   };
 
-  const score = Object.values(statuses).filter(s => s === "correct").length;
+  const score = Object.values(statuses).filter((s) => s === "correct").length;
 
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (generateJumbled.isError) {
-    const errMsg = (generateJumbled.error as { response?: { data?: { error?: string } } })?.response?.data?.error
-      ?? (generateJumbled.error as Error)?.message
-      ?? "An unknown error occurred.";
+    const errMsg =
+      (generateJumbled.error as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+      (generateJumbled.error as Error)?.message ?? "An unknown error occurred.";
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="error-state">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="max-w-lg w-full p-6 rounded-xl border border-destructive/50 bg-destructive/10 space-y-4">
           <h2 className="font-mono text-destructive text-xl font-bold tracking-widest">GENERATION FAILED</h2>
           <p className="text-sm text-muted-foreground font-mono break-words">{errMsg}</p>
-          <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10" data-testid="button-retry-jumbled">
-            RETRY
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={handleBack} variant="ghost" className="font-mono">BACK</Button>
+            <Button onClick={handleStart} variant="outline" className="font-mono border-destructive/50 hover:bg-destructive/10">RETRY</Button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (generateJumbled.isPending) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6" data-testid="loading-state">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="relative">
           <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-ping" />
           <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
@@ -71,16 +83,23 @@ export default function Jumbled() {
     );
   }
 
+  // ── Level select / Start screen ──────────────────────────────────────────
   if (!words.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <Card className="max-w-md w-full border-primary/20 bg-card/50 backdrop-blur">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-mono text-primary">Jumbled Words</CardTitle>
-            <CardDescription className="text-lg">Unscramble 8 forensic terms.</CardDescription>
+            <CardDescription className="text-base">Unscramble 8 forensic terms.</CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center py-6">
-            <Button size="lg" onClick={handleStart} className="font-mono font-bold tracking-widest px-8" data-testid="button-start-jumbled">
+          <CardContent className="space-y-6 pt-2 pb-6">
+            <DifficultySelector selected={difficulty} onSelect={setDifficulty} />
+            <Button
+              size="lg"
+              onClick={handleStart}
+              disabled={!difficulty}
+              className="w-full font-mono font-bold tracking-widest"
+            >
               GENERATE WORDS
             </Button>
           </CardContent>
@@ -89,15 +108,19 @@ export default function Jumbled() {
     );
   }
 
+  // ── Active game ───────────────────────────────────────────────────────────
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between sticky top-[72px] z-40 bg-background/80 backdrop-blur-md p-4 rounded-lg border border-border/50 shadow-sm">
-        <h2 className="text-xl font-mono font-bold tracking-tight">Decrypt Terminology</h2>
+        <div className="flex items-center gap-4">
+          {difficulty && <LevelBadge difficulty={difficulty} onBack={handleBack} />}
+          <h2 className="text-xl font-mono font-bold tracking-tight hidden sm:block">Decrypt Terminology</h2>
+        </div>
         <div className="flex items-center gap-4">
           <div className="font-mono text-muted-foreground">
             Score: <span className="text-primary font-bold text-xl">{score}</span>/8
           </div>
-          <Button onClick={handleStart} variant="outline" size="sm" className="font-mono" data-testid="button-new-round">
+          <Button onClick={handleStart} variant="outline" size="sm" className="font-mono">
             <RefreshCw className="w-4 h-4 mr-2" /> RESTART
           </Button>
         </div>
@@ -105,14 +128,13 @@ export default function Jumbled() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {words.map((word, idx) => {
-          const status = statuses[word.id] || "idle";
+          const status = statuses[word.id] ?? "idle";
           const isCorrect = status === "correct";
           const isRevealed = status === "revealed";
           const isWrong = status === "wrong";
           const isLocked = isCorrect || isRevealed;
-
           return (
-            <Card key={word.id} className={`border-border/50 overflow-hidden transition-colors ${isCorrect ? 'border-primary shadow-[0_0_15px_hsl(var(--primary)/0.1)]' : ''}`}>
+            <Card key={word.id} className={`border-border/50 overflow-hidden transition-colors ${isCorrect ? "border-primary shadow-[0_0_15px_hsl(var(--primary)/0.1)]" : ""}`}>
               <CardHeader className="bg-muted/10 border-b border-border/50 pb-4">
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Entry #{idx + 1}</span>
@@ -120,7 +142,7 @@ export default function Jumbled() {
                   {isRevealed && <Eye className="w-5 h-5 text-muted-foreground" />}
                 </div>
                 <div className="text-center py-4">
-                  <h3 className={`text-4xl font-mono font-bold tracking-[0.2em] uppercase text-foreground ${isWrong ? 'animate-[shake_0.82s_cubic-bezier(.36,.07,.19,.97)_both] text-destructive' : ''}`}>
+                  <h3 className={`text-4xl font-mono font-bold tracking-[0.2em] uppercase text-foreground ${isWrong ? "animate-[shake_0.82s_cubic-bezier(.36,.07,.19,.97)_both] text-destructive" : ""}`}>
                     {word.scrambled}
                   </h3>
                 </div>
@@ -130,21 +152,17 @@ export default function Jumbled() {
                   <KeyRound className="w-4 h-4 shrink-0 mt-0.5 text-primary/70" />
                   <p>{word.hint}</p>
                 </div>
-                
                 <div className="flex gap-2">
-                  <Input 
-                    value={inputs[word.id] || ""}
-                    onChange={(e) => setInputs(prev => ({ ...prev, [word.id]: e.target.value.toUpperCase() }))}
+                  <Input
+                    value={inputs[word.id] ?? ""}
+                    onChange={(e) => setInputs((prev) => ({ ...prev, [word.id]: e.target.value.toUpperCase() }))}
                     placeholder="Enter decrypted term..."
-                    className={`font-mono uppercase ${isCorrect ? 'border-primary text-primary focus-visible:ring-primary' : isRevealed ? 'border-muted text-muted-foreground' : isWrong ? 'border-destructive text-destructive focus-visible:ring-destructive' : ''}`}
+                    className={`font-mono uppercase ${isCorrect ? "border-primary text-primary focus-visible:ring-primary" : isRevealed ? "border-muted text-muted-foreground" : isWrong ? "border-destructive text-destructive focus-visible:ring-destructive" : ""}`}
                     disabled={isLocked}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !isLocked) handleCheck(word);
-                    }}
-                    data-testid={`input-jumbled-${word.id}`}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !isLocked) handleCheck(word); }}
                   />
                   {!isLocked && (
-                    <Button onClick={() => handleCheck(word)} className="font-mono font-bold w-24 shrink-0" data-testid={`button-check-${word.id}`}>
+                    <Button onClick={() => handleCheck(word)} className="font-mono font-bold w-24 shrink-0">
                       VERIFY
                     </Button>
                   )}

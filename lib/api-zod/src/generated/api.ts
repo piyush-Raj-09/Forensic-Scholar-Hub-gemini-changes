@@ -21,6 +21,10 @@ export const HealthCheckResponse = zod.object({
  * Generates 8 random MCQ questions via Claude API
  * @summary Generate forensic quiz questions
  */
+export const GenerateQuizBody = zod.object({
+  "difficulty": zod.enum(['easy', 'intermediate', 'hard'])
+})
+
 export const GenerateQuizResponse = zod.object({
   "questions": zod.array(zod.object({
   "id": zod.number(),
@@ -37,6 +41,10 @@ export const GenerateQuizResponse = zod.object({
  * Generates 8 scrambled forensic terms with hints via Claude API
  * @summary Generate jumbled forensic words
  */
+export const GenerateJumbledBody = zod.object({
+  "difficulty": zod.enum(['easy', 'intermediate', 'hard'])
+})
+
 export const GenerateJumbledResponse = zod.object({
   "words": zod.array(zod.object({
   "id": zod.number(),
@@ -51,6 +59,10 @@ export const GenerateJumbledResponse = zod.object({
  * Generates 8 forensic terms with clues for a crossword via Claude API
  * @summary Generate forensic crossword puzzle
  */
+export const GenerateCrosswordBody = zod.object({
+  "difficulty": zod.enum(['easy', 'intermediate', 'hard'])
+})
+
 export const GenerateCrosswordResponse = zod.object({
   "clues": zod.array(zod.object({
   "id": zod.number(),

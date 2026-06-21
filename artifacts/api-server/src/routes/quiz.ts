@@ -4,6 +4,8 @@ import { geminiGenerate } from "../lib/gemini";
 
 const router: IRouter = Router();
 
+type Difficulty = "easy" | "intermediate" | "hard";
+
 const QUIZ_TOPICS = [
   "DNA profiling and STR analysis",
   "fingerprint classification (loops, whorls, arches)",
@@ -36,17 +38,42 @@ function shuffleAndPick<T>(arr: T[], n: number): T[] {
   return copy.slice(0, n);
 }
 
+const DIFFICULTY_INSTRUCTIONS: Record<Difficulty, string> = {
+  easy: `DIFFICULTY: EASY
+- Target audience: complete beginners with no forensic background
+- Questions must be about basic, everyday-knowledge-level concepts (e.g. what DNA stands for, what fingerprints are used for, what a coroner does)
+- Use plain language. Avoid scientific jargon in the question text.
+- All 4 answer options should be understandable to a non-scientist
+- Wrong options should be plausible-sounding but clearly incorrect on reflection
+- Explanations should be simple and educational`,
+
+  intermediate: `DIFFICULTY: INTERMEDIATE
+- Target audience: students or enthusiasts with some forensic/science knowledge
+- Questions should cover forensic techniques, standard procedures, and established terminology (e.g. Locard's exchange principle, types of fingerprint patterns, chain of custody)
+- Some technical terms allowed; explain them briefly in the explanation field
+- Wrong options should require real knowledge to eliminate`,
+
+  hard: `DIFFICULTY: HARD
+- Target audience: forensic science graduates or professionals
+- Questions must involve advanced scientific methods, precise terminology, edge-case knowledge, or case-based reasoning (e.g. STR allele frequencies, specific reagent chemistry, instrument techniques like GC-MS or SEM-EDX)
+- All 4 options should be technically plausible — only an expert can identify the correct one
+- Explanations should be detailed and scientifically rigorous`,
+};
+
 router.post("/quiz/generate", async (req, res): Promise<void> => {
+  const difficulty: Difficulty = (req.body?.difficulty as Difficulty) ?? "intermediate";
   const seed = Math.floor(Math.random() * 1_000_000);
   const pickedTopics = shuffleAndPick(QUIZ_TOPICS, 8);
-  req.log.info({ seed }, "Generating forensic quiz questions");
+  req.log.info({ seed, difficulty }, "Generating forensic quiz questions");
 
-  const prompt = `SESSION SEED: ${seed} — use this to generate a completely unique set of questions different from any previous response.
+  const prompt = `SESSION SEED: ${seed} — generate a completely unique set of questions different from any previous response.
 
-Generate exactly 8 multiple choice quiz questions about forensic science. Each question MUST come from a different one of these randomly selected topics (one question per topic, in this exact order):
+${DIFFICULTY_INSTRUCTIONS[difficulty]}
+
+Generate exactly 8 multiple choice quiz questions about forensic science. Each question MUST come from a different one of these randomly selected topics (one per topic, in order):
 ${pickedTopics.map((t, i) => `${i + 1}. ${t}`).join("\n")}
 
-IMPORTANT: Do NOT reuse common textbook examples. The seed ${seed} means this session's questions must be distinct — pick obscure angles, edge cases, or advanced concepts within each topic to maximise variety across sessions.
+IMPORTANT: Do NOT reuse common textbook examples. Seed ${seed} ensures this session differs — pick varied angles within each topic.
 
 Return ONLY valid JSON with this exact structure, no markdown or extra text:
 {
@@ -66,7 +93,6 @@ Each question must have exactly 4 options. correctAnswer is the 0-based index of
 
   try {
     const text = await geminiGenerate(prompt);
-
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
@@ -74,7 +100,6 @@ Each question must have exactly 4 options. correctAnswer is the 0-based index of
       res.status(500).json({ error: "Failed to parse Gemini response" });
       return;
     }
-
     const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
     const validated = GenerateQuizResponse.parse(parsed);
     res.json(validated);

@@ -4,24 +4,49 @@ import { geminiGenerate } from "../lib/gemini";
 
 const router: IRouter = Router();
 
-const CROSSWORD_WORD_POOL = [
-  // DNA / serology
-  "ALLELE", "LOCUS", "GENOME", "PRIMER", "NUCLEOTIDE", "HELIX", "SEROLOGY", "ANTIBODY", "ANTIGEN",
-  // Fingerprints
-  "WHORL", "LOOP", "ARCH", "RIDGE", "DELTA", "CORE", "LATENT", "PATENT", "BIFURCATION",
-  // Pathology / death
-  "LIVOR", "RIGOR", "PUTREFACTION", "ALGOR", "NECROSIS", "INQUEST", "LIVIDITY",
-  // Toxicology
-  "TOXIN", "REAGENT", "ALKALOID", "ANTIDOTE", "NARCOTIC", "METABOLITE",
-  // Ballistics
-  "CALIBER", "RIFLING", "BORE", "MUZZLE", "STRIATIONS", "PELLET",
-  // Crime scene
-  "LUMINOL", "LOCARD", "EXEMPLAR", "SUBSTRATE", "SWAB", "CASTING",
-  // Entomology
-  "MAGGOT", "BLOWFLY", "PUPA", "LARVA",
-  // Trace / misc
-  "FIBER", "SPATTER", "TRAJECTORY", "SUBSTRATE", "MODUS", "CORPUS",
+type Difficulty = "easy" | "intermediate" | "hard";
+
+const EASY_WORDS = [
+  "DNA", "BLOOD", "FIBER", "SWAB", "CAST", "LOOP", "ARCH", "CORE",
+  "BORE", "BODY", "CLUE", "CASE", "LEAD", "MARK", "SCAN", "PRINT",
+  "TRACE", "TOXIN", "RIGOR", "LIVOR", "LATEX",
 ];
+const INTERMEDIATE_WORDS = [
+  "ALLELE", "LATENT", "PATENT", "WHORL", "DELTA", "RIDGE", "SEROLOGY",
+  "AUTOPSY", "FORENSIC", "LUMINOL", "LOCARD", "RIFLING", "CALIBER",
+  "MUZZLE", "CORPUS", "MAGGOT", "BLOWFLY", "LARVA", "FIBER",
+  "SPATTER", "MODUS", "INQUEST", "NECROSIS", "REAGENT",
+];
+const HARD_WORDS = [
+  "NUCLEOTIDE", "BIFURCATION", "PUTREFACTION", "LIVIDITY", "STRIATIONS",
+  "ALKALOID", "METABOLITE", "TRAJECTORY", "EXEMPLAR", "SUBSTRATE",
+  "PALYNOLOGY", "CRANIOMETRY", "HISTOLOGY", "PYROLYSIS", "DIAPAUSE",
+  "NITROCELLULOSE", "CHROMATOGRAPHY", "TOXICOLOGY", "ENTOMOLOGY",
+  "SEROLOGY", "ODONTOLOGY", "ANTHROPOLOGY",
+];
+
+const DIFFICULTY_WORD_POOLS: Record<Difficulty, string[]> = {
+  easy: EASY_WORDS,
+  intermediate: INTERMEDIATE_WORDS,
+  hard: HARD_WORDS,
+};
+
+const DIFFICULTY_INSTRUCTIONS: Record<Difficulty, string> = {
+  easy: `DIFFICULTY: EASY
+- Use only short, common forensic terms (3-6 letters preferred)
+- Clues should be simple, plain-English definitions accessible to beginners
+- Example clue style: "Genetic material used for ID" for DNA`,
+
+  intermediate: `DIFFICULTY: INTERMEDIATE
+- Use standard forensic science vocabulary (5-9 letters preferred)
+- Clues should be descriptive but accessible to a forensic science student
+- Example clue style: "Chemical that glows blue when it contacts haemoglobin" for LUMINOL`,
+
+  hard: `DIFFICULTY: HARD
+- Use advanced, technical forensic terms (7-14 letters)
+- Clues should use precise scientific language and require expert knowledge
+- Example clue style: "Sequentially ordered restriction-site polymorphisms used to construct DNA profiles" for RFLP`,
+};
 
 function shuffleAndPick<T>(arr: T[], n: number): T[] {
   const copy = [...arr];
@@ -51,24 +76,27 @@ function buildGrid(
 }
 
 router.post("/crossword/generate", async (req, res): Promise<void> => {
+  const difficulty: Difficulty = (req.body?.difficulty as Difficulty) ?? "intermediate";
   const seed = Math.floor(Math.random() * 1_000_000);
-  const pickedWords = shuffleAndPick(CROSSWORD_WORD_POOL, 12);
-  req.log.info({ seed }, "Generating forensic crossword");
+  const pool = DIFFICULTY_WORD_POOLS[difficulty];
+  const pickedWords = shuffleAndPick(pool, 12);
+  req.log.info({ seed, difficulty }, "Generating forensic crossword");
 
   const prompt = `SESSION SEED: ${seed} — generate a unique crossword layout different from any previous response.
 
+${DIFFICULTY_INSTRUCTIONS[difficulty]}
+
 Create a crossword puzzle with exactly 8 forensic science terms placed on a 15x15 grid (rows and cols 0-14). Mix "across" and "down" directions.
 
-PREFERRED WORDS FOR THIS SESSION (pick 8 of these, chosen to fit well together):
+PREFERRED WORDS FOR THIS SESSION (pick 8 that fit well together on the grid):
 ${pickedWords.join(", ")}
 
-You may substitute a word with another forensic term if it helps the grid fit better, but prefer the list above to ensure variety across sessions.
+You may substitute a word with another forensic term at the same difficulty level if it helps the grid fit better.
 
 STRICT RULES:
-- Every word must fit entirely within the 15x15 grid (row + length ≤ 15 for across; col + length ≤ 15 for down — wait, for across: col + length ≤ 15; for down: row + length ≤ 15)
+- Every word must fit entirely within the grid: for "across" words, col + length ≤ 15; for "down" words, row + length ≤ 15
 - Use only UPPERCASE letters
-- Words should be 4-12 characters long
-- Vary start positions widely across the grid; do not cluster all words in one corner
+- Vary start positions across the grid; do not cluster words in one corner
 - Words may share letters at intersections but must not incorrectly overwrite each other
 
 Return ONLY valid JSON, no markdown:
@@ -88,11 +116,10 @@ Return ONLY valid JSON, no markdown:
   "gridSize": 15
 }
 
-length must equal the exact character count of the answer. Provide exactly 8 clues.`;
+length must equal the exact character count of answer. Provide exactly 8 clues.`;
 
   try {
     const text = await geminiGenerate(prompt);
-
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
     if (jsonStart === -1 || jsonEnd === -1) {
@@ -112,7 +139,6 @@ length must equal the exact character count of the answer. Provide exactly 8 clu
     }
 
     parsed.grid = buildGrid(parsed.clues ?? [], parsed.gridSize ?? 15);
-
     const validated = GenerateCrosswordResponse.parse(parsed);
     res.json(validated);
   } catch (err) {

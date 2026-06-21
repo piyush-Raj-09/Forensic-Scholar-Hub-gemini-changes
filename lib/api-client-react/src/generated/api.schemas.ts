@@ -9,6 +9,19 @@ export interface HealthStatus {
   status: string;
 }
 
+export type DifficultyRequestDifficulty = typeof DifficultyRequestDifficulty[keyof typeof DifficultyRequestDifficulty];
+
+
+export const DifficultyRequestDifficulty = {
+  easy: 'easy',
+  intermediate: 'intermediate',
+  hard: 'hard',
+} as const;
+
+export interface DifficultyRequest {
+  difficulty: DifficultyRequestDifficulty;
+}
+
 export interface ErrorResponse {
   error: string;
 }
