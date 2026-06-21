@@ -34,6 +34,35 @@ function shuffleAndPick<T>(arr: T[], n: number): T[] {
   return copy.slice(0, n);
 }
 
+/** Fisher-Yates shuffle on a character array, guaranteed not equal to original. */
+function scrambleWord(word: string): string {
+  if (word.length <= 1) return word;
+  const letters = word.split("");
+  let result: string;
+  let attempts = 0;
+  do {
+    for (let i = letters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    result = letters.join("");
+    attempts++;
+  } while (result === word && attempts < 100);
+  return result;
+}
+
+/** Verify the scrambled version is an exact anagram of the original. */
+function isValidScramble(original: string, scrambled: string): boolean {
+  if (original.length !== scrambled.length) return false;
+  const freq: Record<string, number> = {};
+  for (const ch of original) freq[ch] = (freq[ch] ?? 0) + 1;
+  for (const ch of scrambled) {
+    if (!freq[ch]) return false;
+    freq[ch]--;
+  }
+  return true;
+}
+
 router.post("/jumbled/generate", async (req, res): Promise<void> => {
   const seed = Math.floor(Math.random() * 1_000_000);
   const pickedDomains = shuffleAndPick(JUMBLED_DOMAINS, 8);
@@ -41,28 +70,27 @@ router.post("/jumbled/generate", async (req, res): Promise<void> => {
 
   const prompt = `SESSION SEED: ${seed} — produce a unique word set different from any previous response.
 
-Generate exactly 8 jumbled/scrambled forensic science vocabulary words. Each word MUST come from a different one of these randomly selected domains (one word per domain, in this order):
+Generate exactly 8 forensic science vocabulary words — one per domain listed below. Return ONLY the answer word and a hint. Do NOT generate any scrambled/jumbled version — that will be handled separately.
+
+Domains (one word per domain, in this order):
 ${pickedDomains.map((d, i) => `${i + 1}. ${d}`).join("\n")}
 
-Avoid the most common/obvious terms (e.g. do not use DNA, AUTOPSY, FORENSIC as they appear too frequently). The seed ${seed} signals you must choose less-common, varied terminology.
+Rules for word selection:
+- Use real, single-word forensic science terms only
+- Words must be 5-12 uppercase letters (e.g. RIGOR, HISTOLOGY, LUMINOL)
+- Avoid overly common words like DNA, AUTOPSY, FORENSIC
+- The seed ${seed} means you must vary your word choices; avoid the most frequently used examples
 
-Return ONLY valid JSON with this exact structure, no markdown or extra text:
+Return ONLY valid JSON, no markdown:
 {
   "words": [
     {
       "id": 1,
-      "scrambled": "SELCOSITH",
-      "hint": "The study of tissues under a microscope, used to identify cause of death",
-      "answer": "HISTOLOGY"
+      "answer": "HISTOLOGY",
+      "hint": "The microscopic study of tissue samples, used to determine cause and manner of death"
     }
   ]
-}
-
-Rules:
-- Use UPPERCASE for both scrambled and answer
-- The scrambled version must use the EXACT same letters as the answer, just rearranged (verify letter-by-letter before returning)
-- Hints should be descriptive and educational
-- Use real forensic science terms (6-12 letters work best)`;
+}`;
 
   try {
     const text = await geminiGenerate(prompt);
@@ -75,8 +103,33 @@ Rules:
       return;
     }
 
-    const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
-    const validated = GenerateJumbledResponse.parse(parsed);
+    const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1)) as {
+      words?: Array<{ id?: number; answer?: string; hint?: string }>;
+    };
+
+    if (!Array.isArray(parsed.words)) {
+      res.status(500).json({ error: "Unexpected response shape from AI" });
+      return;
+    }
+
+    // Scramble every word server-side — Gemini never handles this
+    const words = parsed.words.map((w, i) => {
+      const answer = (w.answer ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+      const scrambled = scrambleWord(answer);
+
+      if (!isValidScramble(answer, scrambled)) {
+        req.log.warn({ answer, scrambled }, "Scramble validation failed; falling back to reverse");
+        // Last-resort fallback: reverse the word (always a valid anagram)
+        const reversed = answer.split("").reverse().join("");
+        return { id: w.id ?? i + 1, scrambled: reversed === answer ? scrambled : reversed, hint: w.hint ?? "", answer };
+      }
+
+      return { id: w.id ?? i + 1, scrambled, hint: w.hint ?? "", answer };
+    });
+
+    req.log.info({ words: words.map(w => `${w.answer} → ${w.scrambled}`) }, "Scramble results");
+
+    const validated = GenerateJumbledResponse.parse({ words });
     res.json(validated);
   } catch (err) {
     req.log.error({ err }, "Error generating jumbled words");
