@@ -20,9 +20,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CrimeSceneData,
+  CrimeSceneEvaluation,
   CrosswordResponse,
   DifficultyRequest,
   ErrorResponse,
+  EvaluateCrimeSceneRequest,
   HealthStatus,
   JumbledResponse,
   QuizResponse
@@ -332,5 +335,149 @@ export const useGenerateCrossword = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getGenerateCrosswordMutationOptions(options));
+    }
+
+export const getGenerateCrimeSceneUrl = () => {
+
+
+
+
+  return `/api/crime-scene/generate`
+}
+
+/**
+ * Generates a random crime scene with location, description, and clues
+ * @summary Generate a virtual crime scene
+ */
+export const generateCrimeScene = async (difficultyRequest: DifficultyRequest, options?: RequestInit): Promise<CrimeSceneData> => {
+
+  return customFetch<CrimeSceneData>(getGenerateCrimeSceneUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      difficultyRequest,)
+  }
+);}
+
+
+
+
+export const getGenerateCrimeSceneMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrimeScene>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateCrimeScene>>, TError,{data: BodyType<DifficultyRequest>}, TContext> => {
+
+const mutationKey = ['generateCrimeScene'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateCrimeScene>>, {data: BodyType<DifficultyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateCrimeScene(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateCrimeSceneMutationResult = NonNullable<Awaited<ReturnType<typeof generateCrimeScene>>>
+    export type GenerateCrimeSceneMutationBody = BodyType<DifficultyRequest>
+    export type GenerateCrimeSceneMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Generate a virtual crime scene
+ */
+export const useGenerateCrimeScene = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateCrimeScene>>, TError,{data: BodyType<DifficultyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateCrimeScene>>,
+        TError,
+        {data: BodyType<DifficultyRequest>},
+        TContext
+      > => {
+      return useMutation(getGenerateCrimeSceneMutationOptions(options));
+    }
+
+export const getEvaluateCrimeSceneUrl = () => {
+
+
+
+
+  return `/api/crime-scene/evaluate`
+}
+
+/**
+ * AI grades the user's three investigation answers and provides detailed feedback
+ * @summary Evaluate user's crime scene investigation answers
+ */
+export const evaluateCrimeScene = async (evaluateCrimeSceneRequest: EvaluateCrimeSceneRequest, options?: RequestInit): Promise<CrimeSceneEvaluation> => {
+
+  return customFetch<CrimeSceneEvaluation>(getEvaluateCrimeSceneUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      evaluateCrimeSceneRequest,)
+  }
+);}
+
+
+
+
+export const getEvaluateCrimeSceneMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateCrimeScene>>, TError,{data: BodyType<EvaluateCrimeSceneRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof evaluateCrimeScene>>, TError,{data: BodyType<EvaluateCrimeSceneRequest>}, TContext> => {
+
+const mutationKey = ['evaluateCrimeScene'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof evaluateCrimeScene>>, {data: BodyType<EvaluateCrimeSceneRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  evaluateCrimeScene(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EvaluateCrimeSceneMutationResult = NonNullable<Awaited<ReturnType<typeof evaluateCrimeScene>>>
+    export type EvaluateCrimeSceneMutationBody = BodyType<EvaluateCrimeSceneRequest>
+    export type EvaluateCrimeSceneMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Evaluate user's crime scene investigation answers
+ */
+export const useEvaluateCrimeScene = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateCrimeScene>>, TError,{data: BodyType<EvaluateCrimeSceneRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof evaluateCrimeScene>>,
+        TError,
+        {data: BodyType<EvaluateCrimeSceneRequest>},
+        TContext
+      > => {
+      return useMutation(getEvaluateCrimeSceneMutationOptions(options));
     }
 

@@ -6,12 +6,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './answerFeedback';
+export * from './crimeSceneAnswers';
+export * from './crimeSceneData';
+export * from './crimeSceneEvaluation';
 export * from './crosswordCell';
 export * from './crosswordClue';
 export * from './crosswordResponse';
 export * from './difficultyRequest';
 export * from './difficultyRequestDifficulty';
 export * from './errorResponse';
+export * from './evaluateCrimeSceneRequest';
+export * from './evaluateCrimeSceneRequestDifficulty';
 export * from './healthStatus';
 export * from './jumbledResponse';
 export * from './jumbledWord';

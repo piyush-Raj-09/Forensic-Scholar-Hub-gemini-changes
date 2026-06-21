@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import Quiz from "@/pages/quiz";
 import Jumbled from "@/pages/jumbled";
 import Crossword from "@/pages/crossword";
+import CrimeScene from "@/pages/crime-scene";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/quiz" component={Quiz} />
         <Route path="/jumbled" component={Jumbled} />
         <Route path="/crossword" component={Crossword} />
+        <Route path="/crime-scene" component={CrimeScene} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

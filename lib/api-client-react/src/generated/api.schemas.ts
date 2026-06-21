@@ -75,3 +75,48 @@ export interface CrosswordResponse {
   gridSize: number;
 }
 
+export interface CrimeSceneData {
+  location: string;
+  crimeType: string;
+  description: string;
+  clues: string[];
+}
+
+export interface CrimeSceneAnswers {
+  crimeType: string;
+  firstEvidence: string;
+  forensicTests: string;
+}
+
+export type EvaluateCrimeSceneRequestDifficulty = typeof EvaluateCrimeSceneRequestDifficulty[keyof typeof EvaluateCrimeSceneRequestDifficulty];
+
+
+export const EvaluateCrimeSceneRequestDifficulty = {
+  easy: 'easy',
+  intermediate: 'intermediate',
+  hard: 'hard',
+} as const;
+
+export interface EvaluateCrimeSceneRequest {
+  difficulty: EvaluateCrimeSceneRequestDifficulty;
+  location: string;
+  description: string;
+  clues: string[];
+  crimeType: string;
+  answers: CrimeSceneAnswers;
+}
+
+export interface AnswerFeedback {
+  score: number;
+  feedback: string;
+  correctApproach: string;
+}
+
+export interface CrimeSceneEvaluation {
+  totalScore: number;
+  crimeTypeFeedback: AnswerFeedback;
+  firstEvidenceFeedback: AnswerFeedback;
+  forensicTestsFeedback: AnswerFeedback;
+  investigatorApproach: string;
+}
+

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Fingerprint, Beaker, FileDigit, Grid3x3, Home } from "lucide-react";
+import { Fingerprint, Beaker, FileDigit, Grid3x3, Home, Siren } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -9,6 +9,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/quiz", label: "Quiz", icon: FileDigit },
     { href: "/jumbled", label: "Jumbled", icon: Beaker },
     { href: "/crossword", label: "Crossword", icon: Grid3x3 },
+    { href: "/crime-scene", label: "Crime Scene", icon: Siren },
   ];
 
   return (
@@ -29,7 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-0.5">
             {navItems.map((item) => {
               const isActive = location === item.href;
               const Icon = item.icon;
@@ -37,15 +38,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-all duration-200 rounded-md
+                  className={`relative flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium transition-all duration-200 rounded-md
                     ${isActive
                       ? "text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                     }`}
-                  data-testid={`link-nav-${item.label.toLowerCase()}`}
+                  data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
                   {isActive && (
                     <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-primary shadow-[0_0_8px_hsl(142,100%,55%)]" />
                   )}

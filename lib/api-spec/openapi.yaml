@@ -16,6 +16,8 @@ tags:
     description: Jumbled words operations
   - name: crossword
     description: Crossword operations
+  - name: crime-scene
+    description: Virtual crime scene investigation
 paths:
   /healthz:
     get:
@@ -104,6 +106,58 @@ paths:
                 $ref: "#/components/schemas/CrosswordResponse"
         "500":
           description: Error generating crossword
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /crime-scene/generate:
+    post:
+      operationId: generateCrimeScene
+      tags: [crime-scene]
+      summary: Generate a virtual crime scene
+      description: Generates a random crime scene with location, description, and clues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DifficultyRequest"
+      responses:
+        "200":
+          description: Crime scene generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrimeSceneData"
+        "500":
+          description: Error generating crime scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /crime-scene/evaluate:
+    post:
+      operationId: evaluateCrimeScene
+      tags: [crime-scene]
+      summary: Evaluate user's crime scene investigation answers
+      description: AI grades the user's three investigation answers and provides detailed feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluateCrimeSceneRequest"
+      responses:
+        "200":
+          description: Evaluation complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrimeSceneEvaluation"
+        "500":
+          description: Error evaluating investigation
           content:
             application/json:
               schema:
@@ -262,3 +316,96 @@ components:
         - clues
         - grid
         - gridSize
+
+    CrimeSceneData:
+      type: object
+      properties:
+        location:
+          type: string
+        crimeType:
+          type: string
+        description:
+          type: string
+        clues:
+          type: array
+          items:
+            type: string
+      required:
+        - location
+        - crimeType
+        - description
+        - clues
+
+    CrimeSceneAnswers:
+      type: object
+      properties:
+        crimeType:
+          type: string
+        firstEvidence:
+          type: string
+        forensicTests:
+          type: string
+      required:
+        - crimeType
+        - firstEvidence
+        - forensicTests
+
+    EvaluateCrimeSceneRequest:
+      type: object
+      properties:
+        difficulty:
+          type: string
+          enum: [easy, intermediate, hard]
+        location:
+          type: string
+        description:
+          type: string
+        clues:
+          type: array
+          items:
+            type: string
+        crimeType:
+          type: string
+        answers:
+          $ref: "#/components/schemas/CrimeSceneAnswers"
+      required:
+        - difficulty
+        - location
+        - description
+        - clues
+        - crimeType
+        - answers
+
+    AnswerFeedback:
+      type: object
+      properties:
+        score:
+          type: number
+        feedback:
+          type: string
+        correctApproach:
+          type: string
+      required:
+        - score
+        - feedback
+        - correctApproach
+
+    CrimeSceneEvaluation:
+      type: object
+      properties:
+        totalScore:
+          type: number
+        crimeTypeFeedback:
+          $ref: "#/components/schemas/AnswerFeedback"
+        firstEvidenceFeedback:
+          $ref: "#/components/schemas/AnswerFeedback"
+        forensicTestsFeedback:
+          $ref: "#/components/schemas/AnswerFeedback"
+        investigatorApproach:
+          type: string
+      required:
+        - totalScore
+        - crimeTypeFeedback
+        - firstEvidenceFeedback
+        - forensicTestsFeedback
+        - investigatorApproach

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { FileDigit, Beaker, Grid3x3, ChevronRight, Fingerprint, ArrowRight } from "lucide-react";
+import { FileDigit, Beaker, Grid3x3, Fingerprint, ArrowRight, Siren } from "lucide-react";
 
 const modes = [
   {
@@ -8,7 +8,6 @@ const modes = [
     description: "Test your knowledge across DNA analysis, ballistics, toxicology, pathology, and more.",
     href: "/quiz",
     icon: FileDigit,
-    accent: "emerald",
     gradient: "from-emerald-500/20 to-emerald-500/0",
     border: "hover:border-emerald-500/60",
     glow: "hover:shadow-[0_8px_40px_rgba(52,211,153,0.18)]",
@@ -21,7 +20,6 @@ const modes = [
     description: "Decode scrambled forensic terminology with contextual hints. Race against your own knowledge.",
     href: "/jumbled",
     icon: Beaker,
-    accent: "cyan",
     gradient: "from-cyan-500/20 to-cyan-500/0",
     border: "hover:border-cyan-500/60",
     glow: "hover:shadow-[0_8px_40px_rgba(6,182,212,0.18)]",
@@ -34,12 +32,23 @@ const modes = [
     description: "Solve an AI-generated forensic matrix. Every session has a completely different layout.",
     href: "/crossword",
     icon: Grid3x3,
-    accent: "violet",
     gradient: "from-violet-500/20 to-violet-500/0",
     border: "hover:border-violet-500/60",
     glow: "hover:shadow-[0_8px_40px_rgba(139,92,246,0.18)]",
     iconBg: "bg-violet-500/10 text-violet-400",
     tag: "SOLVE",
+  },
+  {
+    title: "Virtual Crime Scene",
+    subtitle: "AI scene · 3 questions",
+    description: "Investigate a dynamically generated crime scene. Identify the crime, collect evidence, run forensic tests — then get AI feedback.",
+    href: "/crime-scene",
+    icon: Siren,
+    gradient: "from-red-500/20 to-red-500/0",
+    border: "hover:border-red-500/60",
+    glow: "hover:shadow-[0_8px_40px_rgba(239,68,68,0.18)]",
+    iconBg: "bg-red-500/10 text-red-400",
+    tag: "INVESTIGATE",
   },
 ];
 
@@ -90,7 +99,7 @@ export default function Home() {
       </section>
 
       {/* ── Mode Cards ──────────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 w-full">
         {modes.map((mode, i) => {
           const Icon = mode.icon;
           return (
@@ -136,7 +145,7 @@ export default function Home() {
       {/* ── Stats strip ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 text-center w-full border-t border-border/30 pt-8">
         {[
-          { value: "3", label: "Game Modes" },
+          { value: "4", label: "Game Modes" },
           { value: "3", label: "Difficulty Levels" },
           { value: "∞", label: "Unique Sessions" },
           { value: "AI", label: "Generated Content" },

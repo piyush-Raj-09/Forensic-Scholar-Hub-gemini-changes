@@ -79,3 +79,57 @@ export const GenerateCrosswordResponse = zod.object({
 })
 
 
+/**
+ * Generates a random crime scene with location, description, and clues
+ * @summary Generate a virtual crime scene
+ */
+export const GenerateCrimeSceneBody = zod.object({
+  "difficulty": zod.enum(['easy', 'intermediate', 'hard'])
+})
+
+export const GenerateCrimeSceneResponse = zod.object({
+  "location": zod.string(),
+  "crimeType": zod.string(),
+  "description": zod.string(),
+  "clues": zod.array(zod.string())
+})
+
+
+/**
+ * AI grades the user's three investigation answers and provides detailed feedback
+ * @summary Evaluate user's crime scene investigation answers
+ */
+export const EvaluateCrimeSceneBody = zod.object({
+  "difficulty": zod.enum(['easy', 'intermediate', 'hard']),
+  "location": zod.string(),
+  "description": zod.string(),
+  "clues": zod.array(zod.string()),
+  "crimeType": zod.string(),
+  "answers": zod.object({
+  "crimeType": zod.string(),
+  "firstEvidence": zod.string(),
+  "forensicTests": zod.string()
+})
+})
+
+export const EvaluateCrimeSceneResponse = zod.object({
+  "totalScore": zod.number(),
+  "crimeTypeFeedback": zod.object({
+  "score": zod.number(),
+  "feedback": zod.string(),
+  "correctApproach": zod.string()
+}),
+  "firstEvidenceFeedback": zod.object({
+  "score": zod.number(),
+  "feedback": zod.string(),
+  "correctApproach": zod.string()
+}),
+  "forensicTestsFeedback": zod.object({
+  "score": zod.number(),
+  "feedback": zod.string(),
+  "correctApproach": zod.string()
+}),
+  "investigatorApproach": zod.string()
+})
+
+
