@@ -4,10 +4,49 @@ import { geminiGenerate } from "../lib/gemini";
 
 const router: IRouter = Router();
 
-router.post("/quiz/generate", async (req, res): Promise<void> => {
-  req.log.info("Generating forensic quiz questions");
+const QUIZ_TOPICS = [
+  "DNA profiling and STR analysis",
+  "fingerprint classification (loops, whorls, arches)",
+  "firearm and ballistics examination",
+  "toxicology and poison detection",
+  "crime scene documentation and chain of custody",
+  "forensic pathology and cause of death determination",
+  "digital forensics and cybercrime investigation",
+  "blood spatter pattern analysis",
+  "questioned document examination and handwriting analysis",
+  "forensic anthropology and skeletal analysis",
+  "trace evidence analysis (fibers, hair, glass)",
+  "serology and body fluid identification",
+  "forensic entomology and time of death estimation",
+  "arson investigation and fire debris analysis",
+  "forensic odontology and bite mark analysis",
+  "drug identification and clandestine laboratory investigation",
+  "forensic psychology and criminal profiling",
+  "footwear and tire track examination",
+  "forensic botany and pollen analysis",
+  "gunshot residue analysis",
+];
 
-  const prompt = `Generate exactly 8 multiple choice quiz questions about forensic science. Cover diverse domains including: DNA analysis, fingerprinting, ballistics, toxicology, crime scene investigation, forensic pathology, digital forensics, blood spatter analysis, document examination, and forensic anthropology.
+function shuffleAndPick<T>(arr: T[], n: number): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, n);
+}
+
+router.post("/quiz/generate", async (req, res): Promise<void> => {
+  const seed = Math.floor(Math.random() * 1_000_000);
+  const pickedTopics = shuffleAndPick(QUIZ_TOPICS, 8);
+  req.log.info({ seed }, "Generating forensic quiz questions");
+
+  const prompt = `SESSION SEED: ${seed} — use this to generate a completely unique set of questions different from any previous response.
+
+Generate exactly 8 multiple choice quiz questions about forensic science. Each question MUST come from a different one of these randomly selected topics (one question per topic, in this exact order):
+${pickedTopics.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+
+IMPORTANT: Do NOT reuse common textbook examples. The seed ${seed} means this session's questions must be distinct — pick obscure angles, edge cases, or advanced concepts within each topic to maximise variety across sessions.
 
 Return ONLY valid JSON with this exact structure, no markdown or extra text:
 {
@@ -23,7 +62,7 @@ Return ONLY valid JSON with this exact structure, no markdown or extra text:
   ]
 }
 
-Each question must have exactly 4 options. correctAnswer is the 0-based index of the correct option. Make questions varied in difficulty and cover different forensic domains.`;
+Each question must have exactly 4 options. correctAnswer is the 0-based index of the correct option.`;
 
   try {
     const text = await geminiGenerate(prompt);
